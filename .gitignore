@@ -1,0 +1,6 @@
+*.pyc
+*__/
+build/
+dist/
+*.egg-info/
+*.blend1

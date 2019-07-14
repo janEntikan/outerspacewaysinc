@@ -1,0 +1,19 @@
+[run]
+main_file = "main.py"
+auto_build = true
+auto_save = true
+
+[general]
+name = "OUTERSPACEWAYS INC."
+renderer = "none"
+
+[build]
+asset_dir = "assets/"
+export_dir = "assets/"
+ignore_patterns = [ "*.blend1", "*.blend2",]
+converters = [ "native2bam", "blend2bam",]
+
+[blend2bam]
+material_mode = "legacy"
+physics_engine = "builtin"
+pipeline = "egg"
