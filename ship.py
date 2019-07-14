@@ -79,7 +79,6 @@ class Ship:
             else:
                 self.set = 0
                 self.current = 0
-
         if self.colLeft.getNumEntries() > 0:
             self.steer = 1
         elif self.colRight.getNumEntries() > 0:
@@ -94,10 +93,10 @@ class Ship:
                 hitPos = entry.getSurfacePoint(render)
                 distToGround =  self.node.getZ() - hitPos.getZ()
                 if distToGround < self.fall+0.1:
-                    if self.fall > 0.05:
+                    if self.fall > 0.05: #go bounce
                         self.fall = -0.04
                         self.jump = True
-                    elif self.fall > 0: 
+                    elif self.fall > 0: #land
                         self.fall = 0
                         self.jump = True
                     if self.colTop.getNumEntries() >  0:
@@ -108,12 +107,6 @@ class Ship:
             self.fall += self.gravity/50
             if self.colTop.getNumEntries() > 0:
                 self.fall += 0.1
-
-        # Point nose to fall speed
-        self.model.setP(-(self.fall*300))
-        # Set flame color to speed
-        cc = self.current*5
-        self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
         # Set fw/bw speed
         self.set = clamp(self.set, 0, self.max)
         if hit:
@@ -123,17 +116,33 @@ class Ship:
                 self.current -= self.acceleration
             if self.current < self.acceleration:
                 self.current = 0
-
-
-
         # Update node position
         x = self.node.getX()+(self.steer*self.steerspeed)
         y = self.node.getY()+self.current
         z = self.node.getZ()-self.fall
         self.node.setPos(x, y, z)
+        # Point nose to fall speed
+        self.model.setP(-(self.fall*300))
+        # Set flame color to speed
+        cc = self.current*5
+        self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
         # Respawn if fallen off.
         if z < -20:
             self.respawn()
+
+    def accelerate(self):
+        self.set += self.acceleration
+
+    def decelerate(self):
+        self.set -= self.acceleration
+
+    def goLeft(self):
+        if self.colLeft.getNumEntries() == 0:        
+            self.steer = -1
+
+    def goRight(self):
+        if self.colRight.getNumEntries() == 0:
+            self.steer = 1
 
     def jumpUp(self):
         if self.colTop.getNumEntries() == 0:
