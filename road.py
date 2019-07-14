@@ -42,7 +42,7 @@ class RoadMan():
         self.mapNode.reparentTo(render)
         self.mapNodes = []
         self.loadParts()
-        self.newMap()
+        self.loadMap()
         self.buildMap(0)
         self.lighten()
         self.sky()
@@ -191,11 +191,11 @@ class RoadMan():
                         data.addUint8(z[0])
                         data.addUint8(z[1])
                 data.addUint8(next_tile)
-        with open('gram.map', 'wb') as outfile:
+        with open('saved.map', 'wb') as outfile:
             outfile.write(bytes(data))
 
     def loadMap(self): # Load map from bytes-file
-        file_data = open('gram.map', 'rb').read()
+        file_data = open('saved.map', 'rb').read()
         data = Datagram(file_data)
         iterator = DatagramIterator(data)
         is_color = False
