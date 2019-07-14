@@ -1,7 +1,9 @@
+import json
 from panda3d.core import ColorAttrib
 from panda3d.core import NodePath
 from panda3d.core import DirectionalLight, AmbientLight
 from panda3d.core import PNMImage
+from panda3d.core import Datagram, DatagramIterator
 
 
 # Load colors (8+256)
@@ -28,18 +30,20 @@ for y in range(16):
 P = None			# None part
 N = [P]				# None tile
 D = [(0,0)]			# Default
-H = [P, (1,0)]
-T = D+[(5,0)]
+H = [P, (1,0)]			# Test block
+T = D+[(5,0)]			# Test tunnel
 NR = [N,N,N,N,N,N,N,N,N] 	# Empty row/space
-EM = [[N,N,N,N,D,N,N,N,N]]	# Empty start map
+EM = [[H,N,N,N,D,N,N,N,H]]	# Empty start map
 
 
 class RoadMan():
     def __init__(self):
-        self.mapNode = NodePath("empty")
+        self.mapNode = NodePath("map")
+        self.mapNode.reparentTo(render)
+        self.mapNodes = []
         self.loadParts()
         self.newMap()
-        self.buildMap()
+        self.buildMap(0)
         self.lighten()
         self.sky()
         self.current = [0, 0]
@@ -85,34 +89,48 @@ class RoadMan():
         self.select = self.structure.find("_select")
         self.select.reparentTo(render)
         self.select.setPos(4,2,0)
+            
+    def buildMap(self, at=None): # turn map into model
+        chunksize = 32
+        if at == None:
+            c = 0
+            s = 0
+            e = len(self.map)
+        else:
+            c = int(at/chunksize)
+            s = c*chunksize
+            e = s+chunksize
+        cnode = NodePath("map_"+str(c))
+        for y in range(e-s):
+            if len(self.map) <= y+s:
+                row = NR
+            else: 
+                row = self.map[y+s]
+            if not row == NR: 
+                self.buildRow(y+s, cnode, row)
+            if y >= chunksize-1:
+                cnode.flattenStrong()
+                cnode.reparentTo(self.mapNode)
+                while len(self.mapNodes) <= c:
+                    self.mapNodes.append(NodePath("empty"))
+                self.mapNodes[c].removeNode()
+                self.mapNodes[c] = cnode
+                cnode = NodePath("map_"+str(c))
+                c += 1        
 
-    def newMap(self): # Create an empty map
-        self.map = []
-        for r in EM: self.map.append(r[:])
+    def buildRow(self, y, node, row):
+        for x, col in enumerate(row):
+            if not col == N:
+                for z, part in enumerate(col):
+                    if not part == None:
+                        pos = (x, (y*2), (z/2))
+                        self.buildPart(node, pos, part)
 
-    def buildMap(self): # turn map into model
-        # TODO: break up into 9x64 chunks
-        # and only build where changed
-        # so flattening doesn't slow down
-        # when editing larger maps
-        self.mapNode.removeNode()
-        self.mapNode = NodePath("map")
-        for y, row in enumerate(self.map):
-            if not row == NR:
-                for x, col in enumerate(row):
-                    if not col == N:
-                        for z, part in enumerate(col):
-                            if not part == None:
-                                pos = (x, (y*2), (z/2))
-                                self.buildPart(pos, part)
-        self.mapNode.flattenStrong()
-        self.mapNode.reparentTo(render)
-
-    def buildPart(self, pos, part): # place model
+    def buildPart(self, node, pos, part): # place model
         newPart = self.parts[part[0]]
         newPart.setColor(colors[part[1]])
         newPart.setPos(pos)
-        newPart.copyTo(self.mapNode)
+        newPart.copyTo(node)
 
     def move(self, d): # Move edit cursor
         if d == "f": self.pos[1] += 2
@@ -143,7 +161,7 @@ class RoadMan():
             for i in range((z-len(self.map[y][x]))+1):
                 self.map[y][x].append(None)
         self.map[y][x][z] = new_block
-        self.buildMap()
+        self.buildMap(y)
 
     def remove(self): # Remove tile at cursor
         x = self.pos[0]
@@ -153,4 +171,59 @@ class RoadMan():
             self.map[y][x][z] = None
         except IndexError:
             pass
+        self.buildMap(y)
+
+    # FILE OPERATIONS
+    def newMap(self): # Create an empty map
+        self.map = []
+        for r in EM: self.map.append(r[:])
+
+    def saveMap(self): # Save map to bytes-file
+        data = Datagram()
+        no_part = 64
+        next_tile = 65
+        for y in self.map:
+            for x in y:
+                for z in x:
+                    if z == P:
+                        data.addUint8(no_part)
+                    else:
+                        data.addUint8(z[0])
+                        data.addUint8(z[1])
+                data.addUint8(next_tile)
+        with open('gram.map', 'wb') as outfile:
+            outfile.write(bytes(data))
+
+    def loadMap(self): # Load map from bytes-file
+        file_data = open('gram.map', 'rb').read()
+        data = Datagram(file_data)
+        iterator = DatagramIterator(data)
+        is_color = False
+        map, row, tile  = [], [], []
+        x, y, z = 0, 0, 0
+        for i in range(iterator.getRemainingSize()):
+            n = iterator.getUint8()
+            if is_color:
+                is_color = False
+                part.append(n)
+                tile.append(part)
+            else:
+                if n < 64:
+                    part = [n]
+                    is_color = True
+                else:
+                    if n == 64: 
+                        tile.append(P)
+                        z += 1
+                    if n == 65: 
+                        x += 1
+                        row.append(tile)
+                        tile = []
+                    if x >= 9:
+                        x = 0
+                        y += 1
+                        map.append(row)
+                        row = []
+        self.map = map
         self.buildMap()
+        self.mapNode.analyze()

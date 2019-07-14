@@ -31,6 +31,8 @@ class GameApp(ShowBase):
     def update(self, task):
         self.road.skysphere.setH(self.road.skysphere.getH()+0.1)
         if self.keys["quit"]:    sys.exit()
+        if self.keys["analyze"] == 2:
+            render.analyze()
         if self.keys["mode"] == 2:
             if self.mode == "game":
                 self.mode = "edit"
@@ -65,6 +67,9 @@ class GameApp(ShowBase):
                 if self.keys["down"]:	  road.move("d");t=True
                 if self.keys["jump"]:	  road.place();  t=True
                 if self.keys["del"]:	  road.remove(); t=True
+                if self.keys["save"]:	  road.saveMap();t=True
+                if self.keys["load"]:	  road.loadMap();t=True
+                if self.keys["new"]:	  road.newMap(); t=True
             if t:
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()
@@ -87,6 +92,13 @@ class GameApp(ShowBase):
             ("space", 		"jump"),
             ("delete",	 	"del"),
             ("e",		"mode"),
+            ("s",		"save"),
+            ("l",		"load"),
+            ("n",		"new"),
+            ("c",		"color"),
+            (">",		"n_shape"),
+            ("<",		"n_shape"),
+            ("a",		"analyze"),
             ("escape", 		"quit"),
         )
         for key in keys:
