@@ -26,7 +26,6 @@ class GameApp(ShowBase):
         self.road = RoadMan()
         #self.hud()
         self.spawn()
-        render.analyze()
         self.taskMgr.add(self.update)
 
     def update(self, task):
