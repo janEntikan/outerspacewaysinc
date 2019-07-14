@@ -21,25 +21,16 @@ H = [P, (1,(0.6,1,0.6,1))]
 T = D+[(5,(0.6,0,0,1))]
 NR = [N,N,N,N,N,N,N,N,N] 	# Empty row/space
 EM = [				# Clean start map
-    [D, D, D, D, D, N, D, D, N],
-    [N, N, N, N, D, N, N, N, N],
-    [N, N, N, N, T, N, N, N, N],
-    [N, N, N, D, T, D, N, N, N],
-    [N, N, N, N, D, N, N, N, N],
-    [N, N, N, D, N, D, N, N, N],
     [N, N, N, N, D, N, N, N, N],
 ]
-for i in range(100):
-    EM.append([N, N, N, D, D, D, N, N, N])
-    EM.append([N, H, N, D, D, D, N, H, N])
-    EM.append([N, N, D, T, D, T, D, N, N])
 
 
 class GameApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         pman.shim.init(self)
-        # self.win.setClearColor((0,0,0,1))
+        self.setFrameRateMeter(True)
+        self.win.setClearColor((0,0,0,1))
         self.cTrav = CollisionTraverser()
         self.mode = "game"
         self.defineKeys()
@@ -69,9 +60,7 @@ class GameApp(ShowBase):
             else:
                 ship.steer = 0
             if self.keys["jump"] == 2:
-                if ship.jump and ship.fall < 0.05:
-                    ship.fall = -0.1
-                    ship.jump = False
+                ship.jumpUp()
         self.skysphere.setH(self.skysphere.getH()+0.1)
 
 

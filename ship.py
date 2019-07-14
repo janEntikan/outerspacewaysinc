@@ -1,4 +1,3 @@
-
 from panda3d.core import NodePath
 from panda3d.core import CollisionTraverser, CollisionNode
 from panda3d.core import CollisionHandlerQueue, CollisionRay
@@ -11,17 +10,29 @@ def clamp(i, mini, maxi):
     elif i > maxi:  i = maxi
     return i
 
-def Ray(parent, origin=(0,0,0.1), direction=(0,0,-1)):
-        ray = CollisionRay()
-        ray.setOrigin(origin)
-        ray.setDirection(direction)
-        col = CollisionNode(parent.getName()+"-ray")
-        col.addSolid(ray)
-        colNode = parent.attachNewNode(col)
-        handler = CollisionHandlerQueue()
-        base.cTrav.addCollider(colNode, handler)
-        colNode.show()
-        return handler
+def colSpheres(parent, spheres=[((0,0,0),1)]):
+    col = CollisionNode(parent.getName()+"-colSpheres")
+    for sphere in spheres:
+        col.addSolid(CollisionSphere(*sphere))
+    col.setIntoCollideMask(CollideMask.allOff())
+    colNode = parent.attachNewNode(col)
+    handler = CollisionHandlerQueue()
+    base.cTrav.addCollider(colNode, handler)
+    #colNode.show()
+    return handler
+
+def colRay(parent, origin=(0,0,0.1), direction=(0,0,-1)):
+    ray = CollisionRay()
+    ray.setOrigin(origin)
+    ray.setDirection(direction)
+    col = CollisionNode(parent.getName()+"-ray")
+    col.addSolid(ray)
+    col.setIntoCollideMask(CollideMask.allOff())
+    colNode = parent.attachNewNode(col)
+    handler = CollisionHandlerQueue()
+    base.cTrav.addCollider(colNode, handler)
+    #colNode.show()
+    return handler
 
 
 class Ship:
@@ -49,36 +60,60 @@ class Ship:
         for i in range(3):
             if i == 1: y = 0.2
             else: y = -0.2
-            h = Ray(self.node, ((-1+i)/4, y, -0.005))
+            h = colRay(self.node, ((-1+i)/4, y, -0.005))
             self.handlers.append(h)
+        self.colNose = colSpheres(self.node, 
+            [((0,.2,.05),.05)])
+        self.colLeft = colSpheres(self.node, 
+            [((-.15,-.1,.1), .1)])
+        self.colRight = colSpheres(self.node, 
+            [((.15,-.1,.1), .1)])
+        self.colTop = colSpheres(self.node,
+            [((0,0.2,0.3), .1)])
 
     def update(self):
-        # Do collisions
+        oldfall = self.fall
+        if self.colNose.getNumEntries() > 0:
+            if self.current > 0.12:
+                self.respawn() # crash
+            else:
+                self.set = 0
+                self.current = 0
+
+        if self.colLeft.getNumEntries() > 0:
+            self.steer = 1
+        elif self.colRight.getNumEntries() > 0:
+            self.steer = -1
+
         hit = False
         self.root.cTrav.traverse(render)
         for handler in self.handlers:
-            for entry in list(handler.entries):
+            if len(list(handler.entries)) > 0:
+                handler.sortEntries()
+                entry = list(handler.entries)[0]
                 hitPos = entry.getSurfacePoint(render)
                 distToGround =  self.node.getZ() - hitPos.getZ()
-                if distToGround < 0.1:
+                if distToGround < self.fall+0.1:
                     if self.fall > 0.05:
                         self.fall = -0.04
                         self.jump = True
                     elif self.fall > 0: 
                         self.fall = 0
                         self.jump = True
+                    if self.colTop.getNumEntries() >  0:
+                        self.fall = 0
                     hit = True
                     self.node.setZ(hitPos.getZ()+0.08)
         if not hit:
             self.fall += self.gravity/50
-        # Point noise to fall speed
+            if self.colTop.getNumEntries() > 0:
+                self.fall += 0.1
 
+        # Point nose to fall speed
         self.model.setP(-(self.fall*300))
-
+        # Set flame color to speed
         cc = self.current*5
-
         self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
-
         # Set fw/bw speed
         self.set = clamp(self.set, 0, self.max)
         if hit:
@@ -89,18 +124,25 @@ class Ship:
             if self.current < self.acceleration:
                 self.current = 0
 
+
+
         # Update node position
         x = self.node.getX()+(self.steer*self.steerspeed)
         y = self.node.getY()+self.current
         z = self.node.getZ()-self.fall
         self.node.setPos(x, y, z)
-
         # Respawn if fallen off.
         if z < -20:
             self.respawn()
 
+    def jumpUp(self):
+        if self.colTop.getNumEntries() == 0:
+            if self.jump and self.fall < 0.05:
+                self.fall = -0.1
+                self.jump = False
+
     def respawn(self):
-        self.node.setPos(4,0,0.5)
+        self.node.setPos(4,0,0.7)
         self.fall = 0
         self.set = 0
         self.current = 0
