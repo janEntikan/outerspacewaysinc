@@ -3,7 +3,7 @@ from panda3d.core import CollisionTraverser, CollisionNode
 from panda3d.core import CollisionHandlerQueue, CollisionRay
 from panda3d.core import CollisionHandlerPusher, CollisionSphere
 from panda3d.core import CollideMask
-
+from random import uniform
 
 def clamp(i, mini, maxi):
     if i < mini:    i = mini
@@ -35,13 +35,35 @@ def colRay(parent, origin=(0,0,0.1), direction=(0,0,-1)):
     return handler
 
 
-class Ship:
+class Explode:
+    def __init__(self, dad, model):
+        self.dad = dad
+        self.model = model
+        self.model.show()
+        self.model.setPos(dad.node.getPos())
+        self.scale = 0.5
+        self.age = 0
+        taskMgr.add(self.update)
+
+    def update(self, task):
+        self.scale += 0.2/((self.age/2)+1)
+        self.model.setH(self.model.getH()+1)
+        self.model.setScale(self.scale)
+        self.age += 1
+        self.dad.current /= 2
+        if self.age > 40:
+            self.model.hide()
+            self.dad.respawn()
+            return
+        return task.cont
+
+class Ship: 
     set = 0
     current = 0
     acceleration = 0.002
-    max = 0.4
+    max = 0.25
     fall = 0.001
-    gravity = 0.2
+    gravity = 0.3
     steer = 0
     steerspeed = 0.05
     jumpheight = 0.2
@@ -55,15 +77,20 @@ class Ship:
         self.node.reparentTo(render)
         self.setCollisions()
 
+        self.explosion = loader.loadModel("assets/models/explosion.bam")
+        self.explosion.reparentTo(render)
+        self.explosion.hide()
+        self.explosion.setLightOff()
+
     def setCollisions(self):
         self.handlers = []
         for i in range(3):
             if i == 1: y = 0.2
             else: y = -0.2
-            h = colRay(self.node, ((-1+i)/4, y, -0.005))
+            h = colRay(self.node, ((-1+i)/4, y, 0))
             self.handlers.append(h)
         self.colNose = colSpheres(self.node, 
-            [((0,.2,.05),.05)])
+            [((0,.3,.07),.02)])
         self.colLeft = colSpheres(self.node, 
             [((-.15,-.1,.1), .1)])
         self.colRight = colSpheres(self.node, 
@@ -74,17 +101,20 @@ class Ship:
     def update(self):
         oldfall = self.fall
         if self.colNose.getNumEntries() > 0:
-            if self.current > 0.12:
-                self.respawn() # crash
+            if self.current > 0.1:
+                Explode(self, self.explosion)
+                self.node.hide()
+                self.current = self.current/2
+                self.set = 0
             else:
                 self.set = 0
-                self.current = 0
+                self.current = -0.4
         if self.colLeft.getNumEntries() > 0:
             self.steer = 1
         elif self.colRight.getNumEntries() > 0:
             self.steer = -1
 
-        hit = False
+        self.grounded = False
         self.root.cTrav.traverse(render)
         for handler in self.handlers:
             if len(list(handler.entries)) > 0:
@@ -92,39 +122,39 @@ class Ship:
                 entry = list(handler.entries)[0]
                 hitPos = entry.getSurfacePoint(render)
                 distToGround =  self.node.getZ() - hitPos.getZ()
-                if distToGround < self.fall+0.1:
+                if distToGround < self.fall+0.05:
                     if self.fall > 0.05: #go bounce
-                        self.fall = -0.04
+                        self.fall = -0.05
                         self.jump = True
                     elif self.fall > 0: #land
                         self.fall = 0
                         self.jump = True
                     if self.colTop.getNumEntries() >  0:
                         self.fall = 0
-                    hit = True
-                    self.node.setZ(hitPos.getZ()+0.08)
-        if not hit:
+                    self.grounded = True
+                    self.node.setZ(hitPos.getZ()+0.01)
+        if not self.grounded:
             self.fall += self.gravity/50
             if self.colTop.getNumEntries() > 0:
-                self.fall += 0.1
+                if self.fall < 0:
+                    self.fall = -self.fall
         # Set fw/bw speed
         self.set = clamp(self.set, 0, self.max)
-        if hit:
-            if self.current < self.set:
-                self.current += self.acceleration
-            elif self.current > self.set:
-                self.current -= self.acceleration
-            if self.current < self.acceleration:
-                self.current = 0
+        if self.current < self.set:
+            self.current += self.acceleration
+        elif self.current > self.set:
+            self.current -= self.acceleration
+        if self.current < self.acceleration:
+            self.current = 0
         # Update node position
         x = self.node.getX()+(self.steer*self.steerspeed)
         y = self.node.getY()+self.current
         z = self.node.getZ()-self.fall
-        self.node.setPos(x, y, z)
+        self.node.setFluidPos(x, y, z)
         # Point nose to fall speed
         self.model.setP(-(self.fall*300))
         # Set flame color to speed
-        cc = self.current*5
+        cc = (self.current*7)-uniform(0,0.3)
         self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
         # Respawn if fallen off.
         if z < -20:
@@ -137,12 +167,14 @@ class Ship:
         self.set -= self.acceleration
 
     def goLeft(self):
-        if self.colLeft.getNumEntries() == 0:        
-            self.steer = -1
+        if self.grounded or self.fall < -0.07:
+            if self.colLeft.getNumEntries() == 0:        
+                self.steer = -((self.current*4)+0.1)
 
     def goRight(self):
-        if self.colRight.getNumEntries() == 0:
-            self.steer = 1
+        if self.grounded or self.fall < -0.07:
+            if self.colRight.getNumEntries() == 0:
+                self.steer = ((self.current*4)+0.1)
 
     def jumpUp(self):
         if self.colTop.getNumEntries() == 0:
@@ -151,6 +183,7 @@ class Ship:
                 self.jump = False
 
     def respawn(self):
+        self.node.show()
         self.node.setPos(4,0,0.7)
         self.fall = 0
         self.set = 0

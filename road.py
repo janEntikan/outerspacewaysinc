@@ -6,17 +6,17 @@ from panda3d.core import PNMImage
 from panda3d.core import Datagram, DatagramIterator
 
 
-# Load colors (8+256)
-colors = [ # load special colors first
-    ( 1,  1,  1, 1),	#0 = White  - debug
-    ( 1,  1,  0, 1),	#1 = Yellow - endlevel
-    ( 1, .8, .8, 1), 	#2 = LRed   - death
-    (.8,  1, .8, 1),	#3 = LGreen - turby
-    (.8, .8,  1, 1),    #4 = LBlue  - hp/fuel
-    (.2, .2, .2, 1),    #5 = Dgray  - slide
-    ( 0, .2,  0, 1),    #6 = Dgreen - slow
-    (.8,  1, .8, 1),    #7 = Magenta- parking
-]
+# Load colors (256)
+#0 = White  - debug
+#1 = Yellow - endlevel
+#2 = LRed   - death
+#3 = LGreen - turbo
+#4 = LBlue  - hp/fuel
+#5 = Dgray  - slide
+#6 = Dgreen - slow
+#7 = Magenta- parking
+#>7= Safe
+colors = []
 palette = PNMImage()
 palette.read("assets/palette.png")
 for y in range(16):
@@ -80,8 +80,9 @@ class RoadMan():
     def loadParts(self): 
         self.structure = loader.loadModel("assets/models/parts.bam")
         self.parts = []
-        parts = "f", "b", "btd", "btu", "td", "tu"
-        for part in parts:
+        leftout = "btd", "td"
+        self.partnames = "f", "b", "btu", "tu"
+        for part in self.partnames:
             p = self.structure.find("**/"+part).getParent()
             p.show()
             p.setPos(0,0,0)
@@ -90,33 +91,42 @@ class RoadMan():
         self.select.reparentTo(render)
         self.select.setPos(4,2,0)
             
-    def buildMap(self, at=None): # turn map into model
+    def buildMap(self, at_row=None): # turn map into model
+        # decrease chunksize if placing part is slow
+        # increase chunksize if framerate is low
         chunksize = 32
-        if at == None:
+        if at_row == None: # build entire map
             c = 0
             s = 0
             e = len(self.map)
-        else:
-            c = int(at/chunksize)
+        else: # build chunk that contains at_row
+            c = int(at_row/chunksize)
             s = c*chunksize
             e = s+chunksize
-        cnode = NodePath("map_"+str(c))
+        chunk = NodePath("map_"+str(c))
+        cy = 0
         for y in range(e-s):
             if len(self.map) <= y+s:
                 row = NR
             else: 
                 row = self.map[y+s]
             if not row == NR: 
-                self.buildRow(y+s, cnode, row)
-            if y >= chunksize-1:
-                cnode.flattenStrong()
-                cnode.reparentTo(self.mapNode)
-                while len(self.mapNodes) <= c:
-                    self.mapNodes.append(NodePath("empty"))
-                self.mapNodes[c].removeNode()
-                self.mapNodes[c] = cnode
-                cnode = NodePath("map_"+str(c))
-                c += 1        
+                self.buildRow(y+s, chunk, row)
+            if cy >= chunksize:
+                cy = 0
+                self.addChunk(c, chunk)
+                chunk = NodePath("map_"+str(c))
+                c += 1
+            cy += 1
+        self.addChunk(c, chunk)
+
+    def addChunk(self, c, chunk):
+        chunk.flattenStrong()
+        chunk.reparentTo(self.mapNode)
+        while len(self.mapNodes) <= c:
+            self.mapNodes.append(NodePath("empty"))
+        self.mapNodes[c].removeNode()
+        self.mapNodes[c] = chunk
 
     def buildRow(self, y, node, row):
         for x, col in enumerate(row):
@@ -147,6 +157,36 @@ class RoadMan():
         if self.pos[2] < 0: self.pos[2] = 0
         self.select.setPos(tuple(self.pos))
 
+    def moveCol(self, d): # Move color cursor
+        if d == "u": self.current[1]-=16
+        if d == "d": self.current[1]+=16
+        if d == "l": self.current[1]-=1
+        if d == "r": self.current[1]+=1
+        if self.current[1] < 0:
+            self.current[1] += 256
+        if self.current[1] > 256:
+            self.current[1] -= 256
+
+    def shape(self, d):
+        if d == "n": self.current[0] += 1
+        if d == "p": self.current[0] -= 1
+        if self.current[0] < 0:
+            self.current[0] += len(self.partnames)
+        if self.current[0] >= len(self.partnames):
+            self.current[0] -= len(self.partnames)
+
+    def clone(self): # Copy part at cursor
+        x = self.pos[0]
+        y = int(self.pos[1]/2)
+        z = int(self.pos[2]*2)
+        try:
+            c = self.map[y][x][z]
+        except:
+            c = P
+        if not c == P:
+            self.current[0] = c[0]
+            self.current[1] = c[1]
+
     def place(self): # Place part at cursor
         x = self.pos[0]
         y = int(self.pos[1]/2)
@@ -174,9 +214,12 @@ class RoadMan():
         self.buildMap(y)
 
     # FILE OPERATIONS
-    def newMap(self): # Create an empty map
+    def newMap(self): # Clear map
         self.map = []
         for r in EM: self.map.append(r[:])
+        for node in self.mapNodes:
+            node.removeNode()
+        self.buildMap()
 
     def saveMap(self): # Save map to bytes-file
         data = Datagram()
