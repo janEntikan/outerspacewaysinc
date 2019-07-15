@@ -120,6 +120,7 @@ class Ship:
             if self.colNose.getNumEntries() > 0:
                 if self.current > 0.1:
                     Explode(self, self.explosion)
+                    self.audio["engine"].stop()
                     self.audio["explode"].play()
                     self.node.hide()
                     self.dead = True
