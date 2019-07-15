@@ -3,9 +3,8 @@ import pman.shim
 from direct.showbase.ShowBase import ShowBase
 
 from panda3d.core import loadPrcFile, Filename
-from panda3d.core import NodePath, Camera
+from panda3d.core import NodePath, Camera, DirectionalLight
 from panda3d.core import CollisionTraverser
-from panda3d.core import AntialiasAttrib
 
 from road import RoadMan
 from ship import Ship
@@ -26,12 +25,12 @@ class GameApp(ShowBase):
         self.cTrav.setRespectPrevTransform(True)
         self.delay = [0,5]
         self.mode = "edit"
+        base.win.display_regions[1].dimensions = (0, 1, 0.25, 1)
         self.defineKeys()
         self.road = RoadMan()
-        #self.hud()
+        self.hud()
         self.spawn()
         self.taskMgr.add(self.update)
-        render.setAntialias(AntialiasAttrib.MNone)
         render.setShaderAuto()
 
     def defineKeys(self):
@@ -122,7 +121,7 @@ class GameApp(ShowBase):
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()
             base.camLens.setFov(90)
-        base.cam.setPos(4.01, camY, 2)
+        base.cam.setPos(4.001, camY, 2)
         self.updateKeys()
         return task.cont
 
@@ -143,6 +142,23 @@ class GameApp(ShowBase):
         self.ship = Ship(self, model)
         self.ship.node.reparentTo(render)
         self.ship.node.setPos(4,0,1)
+
+    def hud(self):
+        hudCam = Camera("hudcam")
+        hudCam.getLens().setFov(90)
+        hudCamNode = NodePath(hudCam)
+        hudRegion = base.win.makeDisplayRegion()
+        hudRegion.setCamera(hudCamNode)
+        self.hud = loader.loadModel("assets/models/hud.bam")
+        self.hud.reparentTo(hudCamNode)
+
+        self.hud.setZ(-0.6)
+
+        l = DirectionalLight("hudlight")
+        l.setColor((2,2,2,1))
+        ln = NodePath(l)
+        ln.setHpr(100,-60,90)
+        self.hud.setLight(ln)
 
 def main():
     app = GameApp()
