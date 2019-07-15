@@ -1,15 +1,18 @@
 import sys
-import panda3d
 import pman.shim
 from direct.showbase.ShowBase import ShowBase
+
+from panda3d.core import loadPrcFile, Filename
 from panda3d.core import NodePath, Camera
 from panda3d.core import CollisionTraverser
+from panda3d.core import AntialiasAttrib
+
 from road import RoadMan
 from ship import Ship
 
 
-panda3d.core.loadPrcFile(
-    panda3d.core.Filename.expand_from('$MAIN_DIR/settings.prc')
+loadPrcFile(
+    Filename.expand_from('$MAIN_DIR/settings.prc')
 )
 
 
@@ -28,6 +31,8 @@ class GameApp(ShowBase):
         #self.hud()
         self.spawn()
         self.taskMgr.add(self.update)
+        render.setAntialias(AntialiasAttrib.MNone)
+        render.setShaderAuto()
 
     def defineKeys(self):
         self.keys = {}
@@ -117,7 +122,7 @@ class GameApp(ShowBase):
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()
             base.camLens.setFov(90)
-        base.cam.setPos(4, camY, 2)
+        base.cam.setPos(4.01, camY, 2)
         self.updateKeys()
         return task.cont
 
@@ -130,10 +135,10 @@ class GameApp(ShowBase):
                 self.keys[key] = 1
 
     def spawn(self):
-        self.camLens.setFar(200)
+        self.camLens.setFar(100)
         base.camLens.setNear(0.1)
         base.camLens.setFov(120)
-        base.cam.setPos(0,0,1.5)
+        base.cam.setPos(0.01,0,1.5)
         model = loader.loadModel("assets/models/vehicle.bam")
         self.ship = Ship(self, model)
         self.ship.node.reparentTo(render)

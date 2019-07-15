@@ -90,7 +90,7 @@ class Ship:
             h = colRay(self.node, ((-1+i)/4, y, 0))
             self.handlers.append(h)
         self.colNose = colSpheres(self.node, 
-            [((0,.3,.07),.02)])
+            [((0,.1,.07),.02)])
         self.colLeft = colSpheres(self.node, 
             [((-.15,-.1,.1), .1)])
         self.colRight = colSpheres(self.node, 

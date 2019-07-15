@@ -1,5 +1,3 @@
-import json
-from panda3d.core import ColorAttrib
 from panda3d.core import NodePath
 from panda3d.core import DirectionalLight, AmbientLight
 from panda3d.core import PNMImage
@@ -81,7 +79,10 @@ class RoadMan():
         self.structure = loader.loadModel("assets/models/parts.bam")
         self.parts = []
         leftout = "btd", "td"
-        self.partnames = "f", "b", "btu", "tu"
+        self.partnames = (
+            "f", "b", "btu", "tu",)
+            #"lf", "lb", "lbtu", "ltu",
+            #"rf", "rb", "rbtu", "rtu")
         for part in self.partnames:
             p = self.structure.find("**/"+part).getParent()
             p.show()
@@ -133,7 +134,7 @@ class RoadMan():
             if not col == N:
                 for z, part in enumerate(col):
                     if not part == None:
-                        pos = (x, (y*2), (z/2))
+                        pos = (x, round((y*2)), round((z/2),1))
                         self.buildPart(node, pos, part)
 
     def buildPart(self, node, pos, part): # place model
@@ -269,4 +270,3 @@ class RoadMan():
                         row = []
         self.map = map
         self.buildMap()
-        self.mapNode.analyze()
