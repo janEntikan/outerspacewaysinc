@@ -68,6 +68,7 @@ class Ship:
     steerspeed = 0.05
     jumpheight = 0.2
     jump = True
+    dead = False
 
     def __init__(self, root, model):
         self.root = root
@@ -81,6 +82,21 @@ class Ship:
         self.explosion.reparentTo(render)
         self.explosion.hide()
         self.explosion.setLightOff()
+
+        self.loadAudio()
+
+    def loadAudio(self):
+        folder = "assets/audio/sfx/"
+        self.audio = {
+            "bounce":loader.loadSfx(folder+"bounce.wav"),
+            "engine":loader.loadSfx(folder+"engine.wav"),
+            "explode":loader.loadSfx(folder+"explode.wav"),
+            "land":loader.loadSfx(folder+"land.wav"),
+            "pickup":loader.loadSfx(folder+"pickup.wav"),
+            "shave":loader.loadSfx(folder+"shave.wav"),
+        }
+        
+
 
     def setCollisions(self):
         self.handlers = []
@@ -99,93 +115,112 @@ class Ship:
             [((0,0.2,0.3), .1)])
 
     def update(self):
-        oldfall = self.fall
-        if self.colNose.getNumEntries() > 0:
-            if self.current > 0.1:
-                Explode(self, self.explosion)
-                self.node.hide()
-                self.current = self.current/2
-                self.set = 0
-            else:
-                self.set = 0
-                self.current = -0.4
-        if self.colLeft.getNumEntries() > 0:
-            self.steer = 1
-        elif self.colRight.getNumEntries() > 0:
-            self.steer = -1
+        if not self.dead:
+            oldfall = self.fall
+            if self.colNose.getNumEntries() > 0:
+                if self.current > 0.1:
+                    Explode(self, self.explosion)
+                    self.audio["explode"].play()
+                    self.node.hide()
+                    self.dead = True
+                    self.current = -0.4
+                    self.set = 0
+                else:
+                    self.audio["shave"].play()
+                    self.set = 0
+                    self.current = -0.4
+            if self.colLeft.getNumEntries() > 0:
+                self.steer = 1
+                self.audio["shave"].play()
+            elif self.colRight.getNumEntries() > 0:
+                self.steer = -1
+                self.audio["shave"].play()
 
-        self.grounded = False
-        self.root.cTrav.traverse(render)
-        for handler in self.handlers:
-            if len(list(handler.entries)) > 0:
-                handler.sortEntries()
-                entry = list(handler.entries)[0]
-                hitPos = entry.getSurfacePoint(render)
-                distToGround =  self.node.getZ() - hitPos.getZ()
-                if distToGround < self.fall+0.05:
-                    if self.fall > 0.05: #go bounce
-                        self.fall = -0.05
-                        self.jump = True
-                    elif self.fall > 0: #land
-                        self.fall = 0
-                        self.jump = True
-                    if self.colTop.getNumEntries() >  0:
-                        self.fall = 0
-                    self.grounded = True
-                    self.node.setZ(hitPos.getZ()+0.01)
-        if not self.grounded:
-            self.fall += self.gravity/50
-            if self.colTop.getNumEntries() > 0:
-                if self.fall < 0:
-                    self.fall = -self.fall
-        # Set fw/bw speed
-        self.set = clamp(self.set, 0, self.max)
-        if self.current < self.set:
-            self.current += self.acceleration
-        elif self.current > self.set:
-            self.current -= self.acceleration
-        if self.current < self.acceleration:
-            self.current = 0
-        # Update node position
-        x = self.node.getX()+(self.steer*self.steerspeed)
-        y = self.node.getY()+self.current
-        z = self.node.getZ()-self.fall
-        self.node.setFluidPos(x, y, z)
-        # Point nose to fall speed
-        self.model.setP(-(self.fall*300))
-        # Set flame color to speed
-        cc = (self.current*7)-uniform(0,0.3)
-        self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
-        # Respawn if fallen off.
-        if z < -20:
-            self.respawn()
+            self.grounded = False
+            self.root.cTrav.traverse(render)
+            for handler in self.handlers:
+                if len(list(handler.entries)) > 0:
+                    handler.sortEntries()
+                    entry = list(handler.entries)[0]
+                    hitPos = entry.getSurfacePoint(render)
+                    distToGround =  self.node.getZ() - hitPos.getZ()
+                    if distToGround < self.fall+0.05:
+                        if self.fall > 0.05: #go bounce
+                            self.fall = -0.05
+                            self.jump = True
+                            self.audio["bounce"].play()
+                        elif self.fall > 0: #land
+                            self.fall = 0
+                            self.jump = True
+                            self.audio["land"].play()
+                        if self.colTop.getNumEntries() >  0:
+                            self.fall = 0
+                        self.grounded = True
+                        self.node.setZ(hitPos.getZ()+0.01)
+            if not self.grounded:
+                self.fall += self.gravity/50
+                if self.colTop.getNumEntries() > 0:
+                    if self.fall < 0:
+                        self.fall = -self.fall
+            # Set fw/bw speed
+            self.set = clamp(self.set, 0, self.max)
+            if self.current < self.set:
+                self.current += self.acceleration
+            elif self.current > self.set:
+                self.current -= self.acceleration
+            if self.current < self.acceleration:
+                self.current = 0
+
+            self.audio["engine"].setPlayRate((self.current*7))
+            # Update node position
+            x = self.node.getX()+(self.steer*self.steerspeed)
+            y = self.node.getY()+self.current
+            z = self.node.getZ()-self.fall
+            self.node.setFluidPos(x, y, z)
+            # Point nose to fall speed
+            self.model.setP(-(self.fall*300))
+            # Set flame color to speed
+            cc = (self.current*7)-uniform(0,0.3)
+            self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
+            # Respawn if fallen off.
+            if z < -20:
+                self.respawn()
 
     def accelerate(self):
-        self.set += self.acceleration
+        if not self.dead:
+            self.set += self.acceleration
 
     def decelerate(self):
-        self.set -= self.acceleration
+        if not self.dead:
+            self.set -= self.acceleration
 
     def goLeft(self):
-        if self.grounded or self.fall < -0.07:
-            if self.colLeft.getNumEntries() == 0:        
-                self.steer = -((self.current*4)+0.1)
+        if not self.dead:
+            if self.grounded or self.fall < -0.07:
+                if self.colLeft.getNumEntries() == 0:        
+                    self.steer = -((self.current*4)+0.1)
 
     def goRight(self):
-        if self.grounded or self.fall < -0.07:
-            if self.colRight.getNumEntries() == 0:
-                self.steer = ((self.current*4)+0.1)
+        if not self.dead:
+            if self.grounded or self.fall < -0.07:
+                if self.colRight.getNumEntries() == 0:
+                    self.steer = ((self.current*4)+0.1)
 
     def jumpUp(self):
-        if self.colTop.getNumEntries() == 0:
-            if self.jump and self.fall < 0.05:
-                self.fall = -0.1
-                self.jump = False
+        if not self.dead:
+            if self.colTop.getNumEntries() == 0:
+                if self.jump and self.fall < 0.05:
+                    self.fall = -0.1
+                    self.jump = False
 
     def respawn(self):
+        self.audio["engine"].setLoop(True)
+        self.audio["engine"].setVolume(1)
+        self.audio["engine"].play()
         self.node.show()
         self.node.setPos(4,0,0.7)
         self.fall = 0
         self.set = 0
         self.current = 0
         self.jump = True
+        self.dead = False

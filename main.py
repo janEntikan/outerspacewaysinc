@@ -31,6 +31,12 @@ class GameApp(ShowBase):
         self.hud()
         self.spawn()
         self.taskMgr.add(self.update)
+        self.music = loader.loadSfx("assets/audio/ogg/road1.ogg")
+        self.music.setLoop(True)
+        self.music.setVolume(0.1)
+        self.music.play()
+
+
         render.setShaderAuto()
 
     def defineKeys(self):
@@ -151,9 +157,7 @@ class GameApp(ShowBase):
         hudRegion.setCamera(hudCamNode)
         self.hud = loader.loadModel("assets/models/hud.bam")
         self.hud.reparentTo(hudCamNode)
-
         self.hud.setZ(-0.6)
-
         l = DirectionalLight("hudlight")
         l.setColor((2,2,2,1))
         ln = NodePath(l)
