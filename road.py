@@ -5,7 +5,7 @@ from panda3d.core import Datagram, DatagramIterator
 
 
 # Load colors (256)
-#0 = White  - debug
+#0 = White  - debug (bonus points?)
 #1 = Yellow - endlevel
 #2 = LRed   - death
 #3 = LGreen - turbo

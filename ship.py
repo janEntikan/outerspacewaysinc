@@ -35,7 +35,7 @@ def colRay(parent, origin=(0,0,0.1), direction=(0,0,-1)):
     return handler
 
 
-class Explode:
+class Explosion:
     def __init__(self, dad, model):
         self.dad = dad
         self.model = model
@@ -46,8 +46,8 @@ class Explode:
         taskMgr.add(self.update)
 
     def update(self, task):
-        self.scale += 0.2/((self.age/2)+1)
-        self.model.setH(self.model.getH()+1)
+        self.scale += 0.2/((self.age/4)+1)
+        self.model.setH(self.model.getH()+((2-self.age/100)))
         self.model.setScale(self.scale, self.scale, self.scale/1.2)
         self.age += 1
         self.dad.current /= 2
@@ -72,6 +72,7 @@ class Ship:
     jump = True
     control = True
     dead = False
+    under = None
 
     def __init__(self, root, model):
         self.root = root
@@ -79,7 +80,7 @@ class Ship:
         self.model = model
         self.model.reparentTo(self.node)
         self.node.reparentTo(render)
-        self.setCollisions()
+        self.setColliders()
 
         self.explosion = loader.loadModel("assets/models/explosion.bam")
         self.explosion.reparentTo(render)
@@ -99,7 +100,7 @@ class Ship:
             "shave":loader.loadSfx(folder+"shave.wav"),
         }
         
-    def setCollisions(self):
+    def setColliders(self):
         self.handlers = []
         for i in range(3):
             if i == 1: y = 0.2
@@ -116,13 +117,15 @@ class Ship:
             [((0,0.2,0.4), .1)])
 
     def update(self):
+        self.control = True
         self.air -= 0.0001
         self.fuel -= self.speed/1000
         if self.air <= 0 or self.fuel <= 0:
             self.control = False
-
+        
         if not self.dead:
             self.collide()
+            self.specialFloor()
             # Set fw/bw speed
             self.speed = clamp(self.speed, 0, self.max)
             self.audio["engine"].setPlayRate((self.speed*7))
@@ -141,25 +144,41 @@ class Ship:
                 self.respawn()
             self.setMeters()
 
+    def specialFloor(self):
+        f = self.under
+        if f:
+            if f == 1:
+                pass # TODO: next level!
+            elif f == 2:
+                self.explode()
+            elif f == 3:
+                self.speed += self.acceleration*2
+            elif f == 4:
+                self.fuel = 0.99
+                self.air = 0.99
+            elif f == 5:
+                self.control = False
+            elif f == 6:
+                self.speed -= self.acceleration*2
+    
     def collide(self):
         if self.colNose.getNumEntries() > 0:
-            if self.speed > 0.1:
-                Explode(self, self.explosion)
-                self.audio["engine"].stop()
-                self.audio["explode"].play()
-                self.node.hide()
-                self.dead = True
-            else:
+            if self.speed > 0.1: # full frontal crash
+                self.explode()
+            else: # full frontal bump
                 self.audio["shave"].play()
                 self.speed = 0
                 self.node.setY(self.node.getY()-0.2)
+        # bounce left and right
         if self.colLeft.getNumEntries() > 0:
             self.steer = 1
             self.audio["shave"].play()
         elif self.colRight.getNumEntries() > 0:
             self.steer = -1
             self.audio["shave"].play()
+        # connect to floor
         self.grounded = False
+        self.under = under = None
         self.root.cTrav.traverse(render)
         for handler in self.handlers:
             if len(list(handler.entries)) > 0:
@@ -179,18 +198,39 @@ class Ship:
                     if self.colTop.getNumEntries() >  0:
                         self.fall = 0
                     self.grounded = True
+                    under = entry.getSurfacePoint(render)
                     self.node.setZ(hitPos.getZ()+0.01)
+        # fall if not on floor
         if not self.grounded:
             self.fall += self.gravity/50
             if self.colTop.getNumEntries() > 0:
                 if self.fall < 0:
                     self.fall = -self.fall
+        # else see what color the floor is
+        elif under:
+            x, y, z = under
+            x = round(x)
+            y = round(y/2)
+            z = round(z*2)-1
+            try:
+                color = self.root.road.map[y][x][z][1]
+                if color <= 8 :
+                    self.under = color
+            except:
+                pass
 
     def setMeters(self):
         self.root.hud.setSpeed(self.speed*114)
         self.root.hud.setAir(self.air*14)
         self.root.hud.setFuel(self.fuel*14)
         self.root.hud.setMiles(self.node.getY(), len(self.root.road.map))
+
+    def explode(self):
+        Explosion(self, self.explosion)
+        self.audio["engine"].stop()
+        self.audio["explode"].play()
+        self.node.hide()
+        self.dead = True
 
     def accelerate(self):
         if not self.dead and self.control:
