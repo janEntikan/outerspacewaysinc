@@ -72,8 +72,15 @@ class RoadMan():
             "/              append new track",
             ", and .        prev/next track",
             "s and l        save/load all tracks",
-            "Everything by: ",
-            "    MoMoJoHoBo aka HENDRIK-JAN - JULY 2019",
+            " ",
+            "Based on:",
+            "    Skyroads by Bluemoon Software in 1993",
+            "Programming, Art and SFX: ",
+            "    MoMoJoHoBo aka Hendrik-Jan in 2019",
+            "Music:",
+            "    composed by Ott Aaloe",
+            "    reimagined by MoMoJoHoNo",
+
         )
         for i in controls:
             self.console.addstr(i+"\n", ["grey", None])
