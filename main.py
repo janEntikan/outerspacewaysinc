@@ -44,6 +44,7 @@ class GameApp(ShowBase):
         self.defineKeys()
         self.hud = Hud(self)
         self.road = RoadMan(self)
+        self.road.enableEditing()
         self.spawn()
         self.taskMgr.add(self.update)
 
@@ -62,7 +63,7 @@ class GameApp(ShowBase):
             ("delete",	 	"delete"),
             ("s",		"save"),
             ("l",		"load"),
-            ("c",		"clear_map"),
+            ("n",		"clear_map"),
             ("/",		"create_map"),
             (".",		"next_map"),
             (",",		"prev_map"),

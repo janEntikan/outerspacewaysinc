@@ -1,2 +1,3 @@
 panda3d
 panda3d-pman
+panda3d-purses3d

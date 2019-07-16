@@ -2,7 +2,7 @@ from panda3d.core import NodePath
 from panda3d.core import DirectionalLight, AmbientLight
 from panda3d.core import PNMImage
 from panda3d.core import Datagram, DatagramIterator
-
+from purses3d import Purses
 
 # Load colors (256)
 #0 = White  - debug (bonus points?)
@@ -51,16 +51,41 @@ class RoadMan():
         self.colors = loader.loadTexture("assets/palette.png")
         self.colors.setMagfilter(0)
         self.colors.setMinfilter(0)
+
         self.moveCol("l"); self.moveCol("r")
         self.root.hud.setScreen(self.colors)
-    
+
+        self.console = Purses(50,20)
+        self.console.node.setScale(0.25)
+        self.console.node.setPos(-.7, 0, .7)
+
     def enableEditing(self):
+        self.console.move(0,0)
+        self.console.addstr("EDIT MODE\n", ["grey",None])
+        controls = (
+            "tab            start game",
+            "space/delete   place/remove piece",
+            "numpad 7 and 8 prev/next shape",
+            "numpad 2,4,6,8 select color",
+            "c              copy piece",
+            "n		    clear track",
+            "/              append new track",
+            ", and .        prev/next track",
+            "s and l        save/load all tracks",
+            "Everything by: ",
+            "    MoMoJoHoBo aka HENDRIK-JAN - JULY 2019",
+        )
+        for i in controls:
+            self.console.addstr(i+"\n", ["grey", None])
+        self.console.refresh()
         self.root.music.setVolume(0.03)
         self.select.show()
         self.setHudPiece()
         self.root.hud.screenUp()
 
     def disableEditing(self):
+        self.console.fill()
+        self.console.refresh()
         self.root.music.setVolume(0.1)
         self.select.hide()
         self.hudPiece.hide()
