@@ -59,8 +59,12 @@ class RoadMan():
         self.console.node.setScale(0.25)
         self.console.node.setPos(-.7, 0, .7)
 
-    def enableEditing(self):
+    def printHelp(self):
+        self.console.fill()
+        cm = str(self.currentMap)
+        le = str(len(self.maps)-1)
         self.console.move(0,0)
+        self.console.addstr("ROAD " + cm +"-"+ le+"\n", ["red",None])
         self.console.addstr("EDIT MODE\n", ["grey",None])
         controls = (
             "tab            start game",
@@ -85,6 +89,9 @@ class RoadMan():
         for i in controls:
             self.console.addstr(i+"\n", ["grey", None])
         self.console.refresh()
+
+    def enableEditing(self):
+        self.printHelp()
         self.root.music.setVolume(0.03)
         self.select.show()
         self.setHudPiece()
@@ -294,6 +301,7 @@ class RoadMan():
         self.maps.append(self.map)
         self.clearMap()
         self.buildMap()
+        self.printHelp()
 
     def nextMap(self):
         self.currentMap += 1
@@ -302,6 +310,7 @@ class RoadMan():
         self.destroyMap()
         self.map = self.maps[self.currentMap]
         self.buildMap()
+        self.printHelp()
 
     def prevMap(self):
         self.currentMap -= 1
@@ -310,6 +319,8 @@ class RoadMan():
         self.destroyMap()
         self.map = self.maps[self.currentMap]
         self.buildMap()
+        self.printHelp()
+
 
     def destroyMap(self):
         for node in self.mapNodes:
