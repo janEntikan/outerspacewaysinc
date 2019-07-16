@@ -8,7 +8,7 @@ from panda3d.core import CollisionTraverser
 
 from road import RoadMan
 from ship import Ship
-
+from hud import Hud
 
 loadPrcFile(
     Filename.expand_from('$MAIN_DIR/settings.prc')
@@ -24,20 +24,20 @@ class GameApp(ShowBase):
         self.cTrav = CollisionTraverser()
         self.cTrav.setRespectPrevTransform(True)
         self.delay = [0,5]
-        self.mode = "edit"
         base.win.display_regions[1].dimensions = (0, 1, 0.25, 1)
-        self.defineKeys()
-        self.road = RoadMan()
-        self.hud()
-        self.spawn()
-        self.taskMgr.add(self.update)
+        render.setShaderAuto()
+
         self.music = loader.loadSfx("assets/audio/ogg/road1.ogg")
         self.music.setLoop(True)
-        self.music.setVolume(0.1)
+        self.music.setVolume(0.03)
         self.music.play()
 
-
-        render.setShaderAuto()
+        self.mode = "edit"
+        self.defineKeys()
+        self.hud = Hud()
+        self.road = RoadMan(self)
+        self.spawn()
+        self.taskMgr.add(self.update)
 
     def defineKeys(self):
         self.keys = {}
@@ -60,7 +60,7 @@ class GameApp(ShowBase):
             (",",		"p_shape"),
             ("6",		"c_left"),
             ("4",		"c_right"),
-            ("8",  		"c_up"),
+            ("8",		"c_up"),
             ("2",		"c_down"),
             ("c",		"copy"),
             ("a",		"analyze"),
@@ -92,7 +92,8 @@ class GameApp(ShowBase):
             base.camLens.setFov(60+(self.ship.current*150))
             if self.keys["mode"] == 2:
                 self.mode = "edit"
-                self.road.select.show()
+                self.ship.audio["engine"].stop()
+                self.road.enableEditing()
         elif self.mode == "edit":
             self.delay[0] += 1
             t = False
@@ -113,16 +114,22 @@ class GameApp(ShowBase):
                     road.loadMap()
                 if self.keys["new"] == 2:
                     road.newMap()
-                if self.keys["n_shape"]:  road.shape("n")
-                if self.keys["p_shape"]:  road.shape("p")
-                if self.keys["c_up"]: 	  road.moveCol("u")
-                if self.keys["c_down"]:   road.moveCol("d")
-                if self.keys["c_left"]:   road.moveCol("l")
-                if self.keys["c_right"]:  road.moveCol("r")
+                if self.keys["n_shape"] == 2:
+                    road.shape("n")
+                if self.keys["p_shape"] == 2: 
+                    road.shape("p")
+                if self.keys["c_up"]:
+                    road.moveCol("u"); t=True
+                if self.keys["c_down"]:
+                    road.moveCol("d"); t=True
+                if self.keys["c_left"]:
+                    road.moveCol("l"); t=True
+                if self.keys["c_right"]:
+                    road.moveCol("r"); t=True
                 if self.keys["mode"] == 2:
                     self.mode = "game"
+                    self.road.disableEditing()
                     self.ship.respawn()
-                    self.road.select.hide()
             if t:
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()
@@ -148,21 +155,6 @@ class GameApp(ShowBase):
         self.ship = Ship(self, model)
         self.ship.node.reparentTo(render)
         self.ship.node.setPos(4,0,1)
-
-    def hud(self):
-        hudCam = Camera("hudcam")
-        hudCam.getLens().setFov(90)
-        hudCamNode = NodePath(hudCam)
-        hudRegion = base.win.makeDisplayRegion()
-        hudRegion.setCamera(hudCamNode)
-        self.hud = loader.loadModel("assets/models/hud.bam")
-        self.hud.reparentTo(hudCamNode)
-        self.hud.setZ(-0.6)
-        l = DirectionalLight("hudlight")
-        l.setColor((2,2,2,1))
-        ln = NodePath(l)
-        ln.setHpr(100,-60,90)
-        self.hud.setLight(ln)
 
 def main():
     app = GameApp()

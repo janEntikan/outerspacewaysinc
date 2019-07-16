@@ -54,7 +54,7 @@ class Explode:
         if self.age > 40:
             self.model.hide()
             self.dad.respawn()
-            return
+            return task.done
         return task.cont
 
 class Ship: 
@@ -85,7 +85,7 @@ class Ship:
 
         self.loadAudio()
 
-    def loadAudio(self):
+    def loadAudio(self): # each ship has their own set of sounds
         folder = "assets/audio/sfx/"
         self.audio = {
             "bounce":loader.loadSfx(folder+"bounce.wav"),
@@ -96,8 +96,6 @@ class Ship:
             "shave":loader.loadSfx(folder+"shave.wav"),
         }
         
-
-
     def setCollisions(self):
         self.handlers = []
         for i in range(3):
@@ -112,7 +110,7 @@ class Ship:
         self.colRight = colSpheres(self.node, 
             [((.15,-.1,.1), .1)])
         self.colTop = colSpheres(self.node,
-            [((0,0.2,0.3), .1)])
+            [((0,0.2,0.4), .1)])
 
     def update(self):
         if not self.dead:

@@ -35,17 +35,36 @@ EM = [[H,N,N,N,D,N,N,N,H]]	# Empty start map
 
 
 class RoadMan():
-    def __init__(self):
+    def __init__(self, root):
+        self.root = root
         self.mapNode = NodePath("map")
         self.mapNode.reparentTo(render)
         self.mapNodes = []
         self.loadParts()
         self.loadMap()
-        self.buildMap(0)
         self.lighten()
         self.sky()
         self.current = [0, 0]
         self.pos = [4,2,0]
+        self.hudPiece = NodePath("hud")
+        self.colors = loader.loadTexture("assets/palette.png")
+        self.colors.setMagfilter(0)
+        self.colors.setMinfilter(0)
+        self.moveCol("l"); self.moveCol("r")
+        self.root.hud.setScreen(self.colors)
+    
+    def enableEditing(self):
+        self.root.music.setVolume(0.03)
+        self.select.show()
+        self.setHudPiece()
+        self.root.hud.screenUp()
+
+    def disableEditing(self):
+        self.root.music.setVolume(0.1)
+        self.select.hide()
+        self.hudPiece.hide()
+        self.root.hud.setHolodek(False)
+        self.root.hud.screenDown()
 
     # add skysphere
     def sky(self):
@@ -61,18 +80,18 @@ class RoadMan():
     def lighten(self):
         dl = DirectionalLight("light_directional")
         dl.setColor((1,1,1,1))
-        dlna = render.attachNewNode(dl)
-        dlna.setHpr(-50, -50, 0)
+        self.dlna = render.attachNewNode(dl)
+        self.dlna.setHpr(-50, -50, 0)
         dl = DirectionalLight("light_directional")
         dl.setColor((0.1,0.1,0.1,1))
-        dlnb = render.attachNewNode(dl)
-        dlnb.setHpr(50, 50, 90)
+        self.dlnb = render.attachNewNode(dl)
+        self.dlnb.setHpr(50, 50, 90)
         al = AmbientLight("light_ambient")
         al.setColor((0.05,0.05,0.05,1))
-        aln = render.attachNewNode(al)
-        render.setLight(dlna)
-        render.setLight(dlnb)
-        render.setLight(aln)
+        self.aln = render.attachNewNode(al)
+        render.setLight(self.dlna)
+        render.setLight(self.dlnb)
+        render.setLight(self.aln)
 
     # load geomnodes from model to clone later
     def loadParts(self): 
@@ -95,29 +114,29 @@ class RoadMan():
     def buildMap(self, at_row=None): # turn map into model
         # decrease chunksize if placing part is slow
         # increase chunksize if framerate is low
-        chunksize = 32
+        chunksize = 16
         if at_row == None: # build entire map
             c = 0
             s = 0
             e = len(self.map)
         else: # build chunk that contains at_row
             c = int(at_row/chunksize)
-            s = c*chunksize
-            e = s+chunksize
+            s = (c*chunksize)
+            e = (s+chunksize)
         chunk = NodePath("map_"+str(c))
         cy = 0
         for y in range(e-s):
+            if cy >= chunksize:
+                cy = 0
+                self.addChunk(c, chunk)
+                chunk = NodePath("map_"+str(c))
+                c += 1
             if len(self.map) <= y+s:
                 row = NR
             else: 
                 row = self.map[y+s]
             if not row == NR: 
                 self.buildRow(y+s, chunk, row)
-            if cy >= chunksize:
-                cy = 0
-                self.addChunk(c, chunk)
-                chunk = NodePath("map_"+str(c))
-                c += 1
             cy += 1
         self.addChunk(c, chunk)
 
@@ -161,12 +180,16 @@ class RoadMan():
     def moveCol(self, d): # Move color cursor
         if d == "u": self.current[1]-=16
         if d == "d": self.current[1]+=16
-        if d == "l": self.current[1]-=1
-        if d == "r": self.current[1]+=1
+        if d == "l": self.current[1]+=1
+        if d == "r": self.current[1]-=1
         if self.current[1] < 0:
             self.current[1] += 256
-        if self.current[1] > 256:
+        if self.current[1] >= 256:
             self.current[1] -= 256
+        self.setHudPiece()
+        x = self.current[1]%16
+        y = int(self.current[1]/16)
+        self.root.hud.setCursor(x, y, 16,16)
 
     def shape(self, d):
         if d == "n": self.current[0] += 1
@@ -175,6 +198,7 @@ class RoadMan():
             self.current[0] += len(self.partnames)
         if self.current[0] >= len(self.partnames):
             self.current[0] -= len(self.partnames)
+        self.setHudPiece()
 
     def clone(self): # Copy part at cursor
         x = self.pos[0]
@@ -187,6 +211,7 @@ class RoadMan():
         if not c == P:
             self.current[0] = c[0]
             self.current[1] = c[1]
+        self.setHudPiece()
 
     def place(self): # Place part at cursor
         x = self.pos[0]
@@ -270,3 +295,9 @@ class RoadMan():
                         row = []
         self.map = map
         self.buildMap()
+
+    def setHudPiece(self):
+        new_part = NodePath("rep")
+        self.buildPart(new_part, (0,0,0), self.current)
+        lights = (self.dlna, self.dlnb, self.aln)
+        self.root.hud.setHolodek(new_part, lights)
