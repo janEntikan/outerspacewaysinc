@@ -3,6 +3,7 @@ import pman.shim
 from direct.showbase.ShowBase import ShowBase
 
 from panda3d.core import loadPrcFile, Filename
+from panda3d.core import WindowProperties
 from panda3d.core import NodePath, Camera, DirectionalLight
 from panda3d.core import CollisionTraverser
 
@@ -19,6 +20,12 @@ class GameApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         pman.shim.init(self)
+        props = WindowProperties()
+        props.setCursorHidden(True)
+        props.setMouseMode(WindowProperties.M_relative)
+        base.win.requestProperties(props)
+        base.disableMouse()
+        self.mouse = [0,0]
         self.setFrameRateMeter(True)
         self.win.setClearColor((0,0,0,1))
         self.cTrav = CollisionTraverser()
@@ -34,7 +41,7 @@ class GameApp(ShowBase):
 
         self.mode = "edit"
         self.defineKeys()
-        self.hud = Hud()
+        self.hud = Hud(self)
         self.road = RoadMan(self)
         self.spawn()
         self.taskMgr.add(self.update)

@@ -48,7 +48,7 @@ class Explode:
     def update(self, task):
         self.scale += 0.2/((self.age/2)+1)
         self.model.setH(self.model.getH()+1)
-        self.model.setScale(self.scale)
+        self.model.setScale(self.scale, self.scale, self.scale/1.2)
         self.age += 1
         self.dad.current /= 2
         if self.age > 40:
@@ -59,6 +59,8 @@ class Explode:
 
 class Ship: 
     set = 0
+    fuel = 1
+    air = 1
     current = 0
     acceleration = 0.002
     max = 0.25
@@ -68,6 +70,7 @@ class Ship:
     steerspeed = 0.05
     jumpheight = 0.2
     jump = True
+    control = True
     dead = False
 
     def __init__(self, root, model):
@@ -113,6 +116,11 @@ class Ship:
             [((0,0.2,0.4), .1)])
 
     def update(self):
+        self.air -= 0.0001
+        self.fuel -= self.current/1000
+        if self.air <= 0 or self.fuel <= 0:
+            self.control = False
+
         if not self.dead:
             oldfall = self.fall
             if self.colNose.getNumEntries() > 0:
@@ -184,29 +192,36 @@ class Ship:
             # Respawn if fallen off.
             if z < -20:
                 self.respawn()
+            self.setMeters()
+
+    def setMeters(self):
+        self.root.hud.setSpeed(self.current*114)
+        self.root.hud.setAir(self.air*14)
+        self.root.hud.setFuel(self.fuel*14)
+        self.root.hud.setMiles(self.node.getY(), len(self.root.road.map))
 
     def accelerate(self):
-        if not self.dead:
+        if not self.dead and self.control:
             self.set += self.acceleration
 
     def decelerate(self):
-        if not self.dead:
+        if not self.dead and self.control:
             self.set -= self.acceleration
 
     def goLeft(self):
-        if not self.dead:
+        if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
                 if self.colLeft.getNumEntries() == 0:        
                     self.steer = -((self.current*4)+0.1)
 
     def goRight(self):
-        if not self.dead:
+        if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
                 if self.colRight.getNumEntries() == 0:
                     self.steer = ((self.current*4)+0.1)
 
     def jumpUp(self):
-        if not self.dead:
+        if not self.dead and self.control:
             if self.colTop.getNumEntries() == 0:
                 if self.jump and self.fall < 0.05:
                     self.fall = -0.1
@@ -222,4 +237,8 @@ class Ship:
         self.set = 0
         self.current = 0
         self.jump = True
+        self.control = True
         self.dead = False
+        self.air = 1
+        self.fuel = 1
+        self.setMeters()

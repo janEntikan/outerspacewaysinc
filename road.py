@@ -177,11 +177,17 @@ class RoadMan():
         if self.pos[2] < 0: self.pos[2] = 0
         self.select.setPos(tuple(self.pos))
 
-    def moveCol(self, d): # Move color cursor
-        if d == "u": self.current[1]-=16
-        if d == "d": self.current[1]+=16
-        if d == "l": self.current[1]+=1
-        if d == "r": self.current[1]-=1
+    def moveCol(self, d=None): # Move color cursor
+        if d:
+            if d == "u": self.current[1]-=16
+            if d == "d": self.current[1]+=16
+            if d == "l": self.current[1]+=1
+            if d == "r": self.current[1]-=1
+        else:
+            print(self.root.mouse)
+            self.current[1] += int(self.root.mouse[0])
+            self.current[1] += int(self.root.mouse[1]*16)
+
         if self.current[1] < 0:
             self.current[1] += 256
         if self.current[1] >= 256:
