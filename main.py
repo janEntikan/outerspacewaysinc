@@ -11,6 +11,7 @@ from road import RoadMan
 from ship import Ship
 from hud import Hud
 
+
 loadPrcFile(
     Filename.expand_from('$MAIN_DIR/settings.prc')
 )
@@ -95,8 +96,8 @@ class GameApp(ShowBase):
             else:                      ship.steer = 0
             if self.keys["jump"]:      ship.jumpUp()
             self.ship.update()
-            camY = -6+self.ship.node.getY()+(self.ship.current*5)
-            base.camLens.setFov(60+(self.ship.current*150))
+            camY = -6+self.ship.node.getY()+(self.ship.speed*5)
+            base.camLens.setFov(60+(self.ship.speed*150))
             if self.keys["mode"] == 2:
                 self.mode = "edit"
                 self.ship.audio["engine"].stop()

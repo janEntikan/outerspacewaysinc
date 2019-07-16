@@ -117,108 +117,100 @@ class Ship:
 
     def update(self):
         self.air -= 0.0001
-        self.fuel -= self.current/1000
+        self.fuel -= self.speed/1000
         if self.air <= 0 or self.fuel <= 0:
             self.control = False
 
         if not self.dead:
-            oldfall = self.fall
-            if self.colNose.getNumEntries() > 0:
-                if self.current > 0.1:
-                    Explode(self, self.explosion)
-                    self.audio["engine"].stop()
-                    self.audio["explode"].play()
-                    self.node.hide()
-                    self.dead = True
-                    self.current = -0.4
-                    self.set = 0
-                else:
-                    self.audio["shave"].play()
-                    self.set = 0
-                    self.current = -0.4
-            if self.colLeft.getNumEntries() > 0:
-                self.steer = 1
-                self.audio["shave"].play()
-            elif self.colRight.getNumEntries() > 0:
-                self.steer = -1
-                self.audio["shave"].play()
-
-            self.grounded = False
-            self.root.cTrav.traverse(render)
-            for handler in self.handlers:
-                if len(list(handler.entries)) > 0:
-                    handler.sortEntries()
-                    entry = list(handler.entries)[0]
-                    hitPos = entry.getSurfacePoint(render)
-                    distToGround =  self.node.getZ() - hitPos.getZ()
-                    if distToGround < self.fall+0.05:
-                        if self.fall > 0.05: #go bounce
-                            self.fall = -0.05
-                            self.jump = True
-                            self.audio["bounce"].play()
-                        elif self.fall > 0: #land
-                            self.fall = 0
-                            self.jump = True
-                            self.audio["land"].play()
-                        if self.colTop.getNumEntries() >  0:
-                            self.fall = 0
-                        self.grounded = True
-                        self.node.setZ(hitPos.getZ()+0.01)
-            if not self.grounded:
-                self.fall += self.gravity/50
-                if self.colTop.getNumEntries() > 0:
-                    if self.fall < 0:
-                        self.fall = -self.fall
+            self.collide()
             # Set fw/bw speed
-            self.set = clamp(self.set, 0, self.max)
-            if self.current < self.set:
-                self.current += self.acceleration
-            elif self.current > self.set:
-                self.current -= self.acceleration
-            if self.current < self.acceleration:
-                self.current = 0
-
-            self.audio["engine"].setPlayRate((self.current*7))
+            self.speed = clamp(self.speed, 0, self.max)
+            self.audio["engine"].setPlayRate((self.speed*7))
             # Update node position
             x = self.node.getX()+(self.steer*self.steerspeed)
-            y = self.node.getY()+self.current
+            y = self.node.getY()+self.speed
             z = self.node.getZ()-self.fall
             self.node.setFluidPos(x, y, z)
             # Point nose to fall speed
             self.model.setP(-(self.fall*300))
             # Set flame color to speed
-            cc = (self.current*7)-uniform(0,0.3)
+            cc = (self.speed*7)-uniform(0,0.3)
             self.model.getChild(0).setColorScale(cc*2,cc,cc,1)
             # Respawn if fallen off.
             if z < -20:
                 self.respawn()
             self.setMeters()
 
+    def collide(self):
+        if self.colNose.getNumEntries() > 0:
+            if self.speed > 0.1:
+                Explode(self, self.explosion)
+                self.audio["engine"].stop()
+                self.audio["explode"].play()
+                self.node.hide()
+                self.dead = True
+            else:
+                self.audio["shave"].play()
+                self.speed = 0
+                self.node.setY(self.node.getY()-0.2)
+        if self.colLeft.getNumEntries() > 0:
+            self.steer = 1
+            self.audio["shave"].play()
+        elif self.colRight.getNumEntries() > 0:
+            self.steer = -1
+            self.audio["shave"].play()
+        self.grounded = False
+        self.root.cTrav.traverse(render)
+        for handler in self.handlers:
+            if len(list(handler.entries)) > 0:
+                handler.sortEntries()
+                entry = list(handler.entries)[0]
+                hitPos = entry.getSurfacePoint(render)
+                distToGround =  self.node.getZ() - hitPos.getZ()
+                if distToGround < self.fall+0.05:
+                    if self.fall > 0.05: #go bounce
+                        self.fall = -0.05
+                        self.jump = True
+                        self.audio["bounce"].play()
+                    elif self.fall > 0: #land
+                        self.fall = 0
+                        self.jump = True
+                        self.audio["land"].play()
+                    if self.colTop.getNumEntries() >  0:
+                        self.fall = 0
+                    self.grounded = True
+                    self.node.setZ(hitPos.getZ()+0.01)
+        if not self.grounded:
+            self.fall += self.gravity/50
+            if self.colTop.getNumEntries() > 0:
+                if self.fall < 0:
+                    self.fall = -self.fall
+
     def setMeters(self):
-        self.root.hud.setSpeed(self.current*114)
+        self.root.hud.setSpeed(self.speed*114)
         self.root.hud.setAir(self.air*14)
         self.root.hud.setFuel(self.fuel*14)
         self.root.hud.setMiles(self.node.getY(), len(self.root.road.map))
 
     def accelerate(self):
         if not self.dead and self.control:
-            self.set += self.acceleration
+            self.speed += self.acceleration
 
     def decelerate(self):
         if not self.dead and self.control:
-            self.set -= self.acceleration
+            self.speed -= self.acceleration
 
     def goLeft(self):
         if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
                 if self.colLeft.getNumEntries() == 0:        
-                    self.steer = -((self.current*4)+0.1)
+                    self.steer = -((self.speed*4)+0.1)
 
     def goRight(self):
         if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
                 if self.colRight.getNumEntries() == 0:
-                    self.steer = ((self.current*4)+0.1)
+                    self.steer = ((self.speed*4)+0.1)
 
     def jumpUp(self):
         if not self.dead and self.control:
@@ -234,8 +226,7 @@ class Ship:
         self.node.show()
         self.node.setPos(4,0,0.7)
         self.fall = 0
-        self.set = 0
-        self.current = 0
+        self.speed = 0
         self.jump = True
         self.control = True
         self.dead = False
