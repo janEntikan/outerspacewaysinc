@@ -58,14 +58,17 @@ class GameApp(ShowBase):
             ("page_up",		"up"),
             ("page_down",	"down"),
             ("space", 		"jump"),
-            ("delete",	 	"del"),
-            ("e",		"mode"),
+            ("tab",		"mode"),
+            ("delete",	 	"delete"),
             ("s",		"save"),
             ("l",		"load"),
-            ("n",		"new"),
+            ("c",		"clear_map"),
+            ("/",		"create_map"),
+            (".",		"next_map"),
+            (",",		"prev_map"),
             ("c",		"color"),
-            (".",		"n_shape"),
-            (",",		"p_shape"),
+            ("9",		"n_shape"),
+            ("7",		"p_shape"),
             ("6",		"c_left"),
             ("4",		"c_right"),
             ("8",		"c_up"),
@@ -115,12 +118,18 @@ class GameApp(ShowBase):
                 if self.keys["down"]:	  road.move("d");t=True
                 if self.keys["copy"]:	  road.clone()  ;t=True
                 if self.keys["jump"]:	  road.place();  t=True
-                if self.keys["del"]:	  road.remove(); t=True
+                if self.keys["delete"]:	  road.remove(); t=True
                 if self.keys["save"] == 2:
                     road.saveMap()
                 if self.keys["load"] == 2:
                     road.loadMap()
-                if self.keys["new"] == 2:
+                if self.keys["clear_map"] == 2:
+                    road.clearMap()
+                if self.keys["next_map"] == 2:
+                    road.nextMap()
+                if self.keys["prev_map"] == 2:
+                    road.prevMap()
+                if self.keys["create_map"] == 2:
                     road.newMap()
                 if self.keys["n_shape"] == 2:
                     road.shape("n")

@@ -148,7 +148,8 @@ class Ship:
         f = self.under
         if f:
             if f == 1:
-                pass # TODO: next level!
+                self.root.road.playNextMap()
+                self.respawn()
             elif f == 2:
                 self.explode()
             elif f == 3:

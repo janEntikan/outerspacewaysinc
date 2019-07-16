@@ -8,18 +8,30 @@ Made with Panda3d by Hendrik-Jan/Momojohobo
 * .blend files are to be opened with blender
 * .zip files in audio folder are to be opened with FLstudio
 
+##Controls
 
-You start in EDIT more, 
-* press arrows and pg_up/pg_down to move cursor
-* space to place block
-* delete to remove block
-* numpad arrows to change color
-* , and . to change block type
-* n, s, l to clear, save and load the map
+### EDIT mode, 
+* ARROWS and PG_UP / PG_DOWN to move cursor
+* SPACE to place piece
+* DEL to remove piece
+* numpad arrows (2,4,6,8) to change color
+* numpad 7 and 9 to change piece shape
+* "c" to clear current track
+* "s" and "l" to save and load all tracks
+* "," and "." to scroll through track and
+* "/" to append a new track
+* TAB to start GAME mode
 
-Press E to start GAME mode
-* press up/down to accelerate/decelerate
-* press left/right to steer
-* press space to jump
-* press E to return to EDIT mode
+### GAME mode
+* UP/DOWN to accelerate/decelerate
+* LEFT/RIGHT to steer
+* SPACE to jump
+* TAB to return to EDIT mode
 
+## Special piece colors
+* YELLOW - Finish
+* LIGHT RED - Death
+* LIGHT GREEN - Turbo
+* LIGHT BLUE - Refuel
+* DARK GRAY - Slide
+* DARK GREEN - Slow down

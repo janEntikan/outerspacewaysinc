@@ -42,6 +42,7 @@ class RoadMan():
         self.mapNodes = []
         self.loadParts()
         self.loadMap()
+        self.currentMap = 0
         self.lighten()
         self.sky()
         self.current = [0, 0]
@@ -245,27 +246,68 @@ class RoadMan():
             pass
         self.buildMap(y)
 
-    # FILE OPERATIONS
-    def newMap(self): # Clear map
-        self.map = []
-        for r in EM: self.map.append(r[:])
-        for node in self.mapNodes:
-            node.removeNode()
+    # MAP OPERATIONS
+    def playNextMap(self):
+        self.currentMap += 1
+       # TODO: if last map, play credits map.
+       # Repeat from start for now
+        if self.currentMap >= len(self.maps):
+            self.currentMap = 0
+        self.destroyMap()
+        self.map = self.maps[self.currentMap]
         self.buildMap()
 
+    def newMap(self):
+        self.currentMap = len(self.maps)
+        self.maps.append(self.map)
+        self.clearMap()
+        self.buildMap()
+
+    def nextMap(self):
+        self.currentMap += 1
+        if self.currentMap >= len(self.maps):
+            self.currentMap = 0
+        self.destroyMap()
+        self.map = self.maps[self.currentMap]
+        self.buildMap()
+
+    def prevMap(self):
+        self.currentMap -= 1
+        if self.currentMap < 0:
+            self.currentMap = len(self.maps)-1
+        self.destroyMap()
+        self.map = self.maps[self.currentMap]
+        self.buildMap()
+
+    def destroyMap(self):
+        for node in self.mapNodes:
+            node.removeNode()
+
+    def clearMap(self): # Clear map
+        self.map = []
+        self.maps[self.currentMap] = self.map
+        for r in EM: self.map.append(r[:])
+        self.destroyMap()
+        self.buildMap()
+
+    # FILE OPERATIONS
     def saveMap(self): # Save map to bytes-file
         data = Datagram()
         no_part = 64
         next_tile = 65
-        for y in self.map:
-            for x in y:
-                for z in x:
-                    if z == P:
-                        data.addUint8(no_part)
-                    else:
-                        data.addUint8(z[0])
-                        data.addUint8(z[1])
-                data.addUint8(next_tile)
+        next_map = 66
+        for map in self.maps:
+            if len(map) > 1:
+                for y in map:
+                    for x in y:
+                        for z in x:
+                            if z == P:
+                                data.addUint8(no_part)
+                            else:
+                                data.addUint8(z[0])
+                                data.addUint8(z[1])
+                        data.addUint8(next_tile)
+                data.addUint8(next_map)
         with open('saved.map', 'wb') as outfile:
             outfile.write(bytes(data))
 
@@ -274,7 +316,7 @@ class RoadMan():
         data = Datagram(file_data)
         iterator = DatagramIterator(data)
         is_color = False
-        map, row, tile  = [], [], []
+        maps, map, row, tile  = [], [], [], []
         x, y, z = 0, 0, 0
         for i in range(iterator.getRemainingSize()):
             n = iterator.getUint8()
@@ -294,12 +336,19 @@ class RoadMan():
                         x += 1
                         row.append(tile)
                         tile = []
+                    if n == 66:
+                        x = y = z = 0
+                        maps.append(map)
+                        map, row, tile = [],[],[]
                     if x >= 9:
                         x = 0
                         y += 1
                         map.append(row)
                         row = []
-        self.map = map
+        self.maps = maps
+        print(len(self.maps), " maps loaded")
+        self.currentMap = 0
+        self.map = self.maps[0]
         self.buildMap()
 
     def setHudPiece(self):
