@@ -2,24 +2,8 @@ from panda3d.core import NodePath, Camera
 from panda3d.core import DirectionalLight, PointLight
 from panda3d.core import CollisionTraverser
 from panda3d.core import SequenceNode, SwitchNode
+from purses3d import Purses
 
-
-def holospin(node, task):
-    node.setH(node.getH()+1)
-    return task.cont
-
-def moveScreen(screen, d, task):
-    speed = 0.03
-    z = screen.getZ()
-    if d == "u":
-        if z < 0:
-            screen.setZ(z+speed)
-            return task.cont
-    else:
-        if z > -1:
-            screen.setZ(z-speed)
-            return task.cont
-    return task.done
 
 class Hud():
     def __init__(self, root):
@@ -47,6 +31,16 @@ class Hud():
             SwitchNode(gauge).replaceNode(self.gauge[gauge].node())
         self.gauge["mileage"] = self.node.find("**/levels_miles")
 
+        self.val = Purses(30,1)
+        self.val.move(0,0)
+        self.val.addstr(" 500", ["yellow",None])
+        self.val.move(21,0)
+        self.val.addstr("IDLE", ["yellow",None])
+        self.val.refresh()
+        self.val.node.setScale((0.5, 1, 0.03))
+        self.val.node.setPos((0.075, 0, -0.68))
+
+      
         self.screen.setY(1)
         self.screen.setP(60)
 
@@ -54,6 +48,7 @@ class Hud():
         self.hololight = self.node.find("**/hololight")
 
         self.lighten()
+
 
     def lighten(self):
         l = DirectionalLight("hudlight")
@@ -82,20 +77,36 @@ class Hud():
         self.gauge["mileage"].setScale(w,1,1)
 
     def screenUp(self):
+        self.val.node.hide()
         self.screen.setZ(-1)
         taskMgr.add(
-            moveScreen, extraArgs=[self.screen, "u"], 
+            self.moveScreen, 
+            extraArgs=["u"], 
             appendTask=True)
 
     def screenDown(self):
         self.screen.setZ(0)
         taskMgr.add(
-            moveScreen, 
-            extraArgs=[self.screen, "d"],
+            self.moveScreen, 
+            extraArgs=["d"],
             appendTask=True)
 
     def setScreen(self, texture):
         self.screencard.setTexture(texture)
+
+    def moveScreen(self, d, task):
+        speed = 0.03
+        z = self.screen.getZ()
+        if d == "u":
+            if z < 0:
+                self.screen.setZ(z+speed)
+                return task.cont
+        else:
+            if z > -1:
+                self.screen.setZ(z-speed)
+                return task.cont
+            self.val.node.show()
+        return task.done
 
     def setCursor(self, x, y, w, h):
         w = 1/w
@@ -118,10 +129,13 @@ class Hud():
                 model.setLight(light)
             self.hololight.show()
 
-            taskMgr.add(holospin, "holospin", 
+            taskMgr.add(self.holospin, "holospin", 
                 extraArgs=[model],
                 appendTask=True)
 
         self.holodek.reparentTo(self.node)
 
+    def holospin(self, node, task):
+        node.setH(node.getH()+1)
+        return task.cont
 

@@ -68,6 +68,8 @@ class RoadMan():
         self.console.addstr("EDIT MODE\n", ["grey",None])
         controls = (
             "tab            start game",
+            "d              set drain",
+            "g              set gravity",
             "arrows         move cursor on x and y",
             "pgup/pgdown    move cursor on z",
             "space/delete   place/remove piece",
@@ -82,10 +84,10 @@ class RoadMan():
             "Based on:",
             "    Skyroads by Bluemoon Software in 1993",
             "Programming, Art and SFX: ",
-            "    MoMoJoHoBo aka Hendrik-Jan in 2019",
+            "    Hendrik-Jan in 2019",
             "Music:",
             "    composed by Ott Aaloe",
-            "    reimagined by MoMoJoHoNo",
+            "    reimagined by Hendrik-Jan",
 
         )
         for i in controls:
@@ -156,6 +158,7 @@ class RoadMan():
     def buildMap(self, at_row=None): # turn map into model
         # decrease chunksize if placing part is slow
         # increase chunksize if framerate is low
+        # around 20 seems to be a good balance
         chunksize = 16
         if at_row == None: # build entire map
             c = 0
@@ -306,6 +309,7 @@ class RoadMan():
         self.clearMap()
         self.buildMap()
         self.printHelp()
+        self.pos[1] = 0
 
     def nextMap(self):
         self.currentMap += 1
@@ -316,6 +320,7 @@ class RoadMan():
         self.buildMap()
         self.printHelp()
         self.root.shuffleSong()
+        self.pos[1] = 0
 
     def prevMap(self):
         self.currentMap -= 1
@@ -326,6 +331,7 @@ class RoadMan():
         self.buildMap()
         self.printHelp()
         self.root.shuffleSong()
+        self.pos[1] = 0
 
     def destroyMap(self):
         for node in self.mapNodes:
@@ -337,6 +343,7 @@ class RoadMan():
         for r in EM: self.map.append(r[:])
         self.destroyMap()
         self.buildMap()
+        self.pos[1] = 0
 
     # FILE OPERATIONS
     def saveMap(self): # Save map to bytes-file

@@ -180,6 +180,7 @@ class GameApp(ShowBase):
             vol = 0.03
         songs = (
             "assets/audio/ogg/road1.ogg",
+            "assets/audio/ogg/road8.ogg",
             "assets/audio/ogg/road3.ogg"
         )
         self.music = loader.loadSfx(choice(songs))
