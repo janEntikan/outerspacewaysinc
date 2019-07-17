@@ -119,9 +119,9 @@ class Ship:
 
     def update(self):
         self.control = True
-        self.air -= 0.0001
-        self.fuel -= self.speed/1000
-        if self.air <= 0 or self.fuel <= 0:
+        self.air -= (1/5000)*self.o2drain
+        self.fuel -= (self.speed/1000)*self.fueldrain
+        if self.air <= 0.01 or self.fuel <= 0.01:
             self.control = False
         
         if not self.dead:
@@ -214,7 +214,7 @@ class Ship:
             self.slide = 0
         # fall if not on floor
         if not self.grounded:
-            self.fall += self.gravity/50
+            self.fall += (self.gravity)/550
             if self.colTop.getNumEntries() > 0:
                 if self.fall < 0:
                     self.fall = -self.fall
@@ -236,6 +236,7 @@ class Ship:
         self.root.hud.setAir(self.air*14)
         self.root.hud.setFuel(self.fuel*14)
         self.root.hud.setMiles(self.node.getY(), len(self.root.road.map))
+        self.root.hud.setGravity(self.gravity)
 
     def explode(self):
         Explosion(self, self.explosion)
@@ -270,11 +271,12 @@ class Ship:
                     self.slide = 0.01
 
     def jumpUp(self):
-        if not self.dead and self.control:
-            if self.colTop.getNumEntries() == 0:
-                if self.jump and self.fall < 0.05:
-                    self.fall = -0.1
-                    self.jump = False
+        if self.gravity < 8:
+            if not self.dead and self.control:
+                if self.colTop.getNumEntries() == 0:
+                    if self.jump and self.fall < 0.05:
+                        self.fall = -0.1
+                        self.jump = False
 
     def respawn(self):
         self.audio["engine"].setLoop(True)
@@ -289,4 +291,7 @@ class Ship:
         self.dead = False
         self.air = 1
         self.fuel = 1
+        self.gravity = self.root.road.gravity
+        self.fueldrain = self.root.road.fueldrain
+        self.o2drain = self.root.road.o2drain
         self.setMeters()

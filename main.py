@@ -58,6 +58,7 @@ class GameApp(ShowBase):
             ("page_down",	"down"),
             ("space", 		"jump"),
             ("tab",		"mode"),
+            ("`",		"help"),
             ("delete",	 	"delete"),
             ("s",		"save"),
             ("l",		"load"),
@@ -66,6 +67,11 @@ class GameApp(ShowBase):
             (".",		"next_map"),
             (",",		"prev_map"),
             ("c",		"color"),
+            ("+",		"add"),
+            ("-",		"sub"),
+            ("f",		"fueldrain"),
+            ("g",		"gravity"),
+            ("h",		"o2drain"),
             ("9",		"n_shape"),
             ("7",		"p_shape"),
             ("6",		"c_left"),
@@ -142,10 +148,30 @@ class GameApp(ShowBase):
                     road.moveCol("l"); t=True
                 if self.keys["c_right"]:
                     road.moveCol("r"); t=True
+                if self.keys["gravity"]:
+                    if self.keys["add"]:
+                        self.road.setGravity(1)
+                    if self.keys["sub"]:
+                        self.road.setGravity(-1)
+                    t = True
+                if self.keys["fueldrain"]:
+                    if self.keys["add"]:
+                        self.road.setFuelDrain(1)
+                    if self.keys["sub"]:
+                        self.road.setFuelDrain(-1)
+                    t = True
+                if self.keys["o2drain"]:
+                    if self.keys["add"]:
+                        self.road.setO2Drain(1)
+                    if self.keys["sub"]:
+                        self.road.setO2Drain(-1)    
+                    t = True
                 if self.keys["mode"] == 2:
                     self.mode = "game"
                     self.road.disableEditing()
                     self.ship.respawn()
+                if self.keys["help"] == 2:
+                    self.road.toggleHelp()
             if t:
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()

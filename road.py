@@ -3,6 +3,8 @@ from panda3d.core import DirectionalLight, AmbientLight
 from panda3d.core import PNMImage
 from panda3d.core import Datagram, DatagramIterator
 from purses3d import Purses
+from ship import clamp
+
 
 # Load colors (256)
 #0 = White  - debug (bonus points?)
@@ -41,46 +43,69 @@ class RoadMan():
         self.mapNode.reparentTo(render)
         self.mapNodes = []
         self.loadParts()
-        self.loadMap()
-        self.currentMap = 0
         self.lighten()
         self.sky()
+        self.currentMap = 0
         self.current = [0, 0]
         self.pos = [4,2,0]
-        self.hudPiece = NodePath("hud")
         self.colors = loader.loadTexture("assets/palette.png")
         self.colors.setMagfilter(0)
         self.colors.setMinfilter(0)
-
         self.moveCol("l"); self.moveCol("r")
         self.root.hud.setScreen(self.colors)
+        self.hudPiece = NodePath("hud")
+        self.stat = Purses(50,40)
+        self.stat.node.setScale(0.35,1,0.7)
+        self.stat.node.setPos(-.65, 0, -1.5)
+        try:
+            self.loadMap()
+        except FileNotFoundError:
+            self.map = []
+            self.maps = [self.map]
+            self.clearMap()
+        self.help = Purses(50,40)
+        self.help.node.setScale(0.35,1,0.7)
+        self.help.node.setPos(-.65, 0, .3)
+        self.showHelp = False
+        self.help.addstr("press ` for help")
+        self.help.refresh()
+        self.printStat()
 
-        self.console = Purses(50,23)
-        self.console.node.setScale(0.25)
-        self.console.node.setPos(-.7, 0, .7)
-
-    def printHelp(self):
-        self.console.fill()
+    def printStat(self):
+        self.stat.fill()
+        self.stat.move(0,0)
         cm = str(self.currentMap)
         le = str(len(self.maps)-1)
-        self.console.move(0,0)
-        self.console.addstr("ROAD " + cm +"-"+ le+"\n", ["red",None])
-        self.console.addstr("EDIT MODE\n", ["grey",None])
+        sreds = (
+            " ROAD " + cm +"-"+ le,
+            "GRAVITY " + str((self.gravity+2)*100),
+            "FUEL DRAIN " + str(self.fueldrain),
+            "o2 DRAIN " + str(self.o2drain),
+        )
+        for sred in sreds:
+            self.stat.addstr(sred+"\n", ["green", None])
+        self.stat.refresh()
+
+    def printHelp(self):
+        self.help.fill()
+        self.help.move(0,0)
         controls = (
+            "EDIT MODE",
             "tab            start game",
-            "d              set drain",
-            "g              set gravity",
+            "f and +/-      set fuel drain",
+            "g and +/-      set gravity",
+            "h and +/-      set o2 drain",            
             "arrows         move cursor on x and y",
             "pgup/pgdown    move cursor on z",
             "space/delete   place/remove piece",
             "numpad 7 and 8 prev/next shape",
             "numpad 2,4,6,8 select color",
             "c              copy piece",
-            "n		    clear track",
+            "n              clear track",
             "/              append new track",
             ", and .        prev/next track",
             "s and l        save/load all tracks",
-            " ",
+            " "," ",
             "Based on:",
             "    Skyroads by Bluemoon Software in 1993",
             "Programming, Art and SFX: ",
@@ -91,19 +116,30 @@ class RoadMan():
 
         )
         for i in controls:
-            self.console.addstr(i+"\n", ["grey", None])
-        self.console.refresh()
+            self.help.addstr(i+"\n", ["grey", None])
+        self.help.refresh()
+
+    def toggleHelp(self):
+        if self.showHelp:
+            self.showHelp = False
+            self.help.fill()
+            self.help.addstr(0,0,"press ` for help")
+            self.help.refresh()
+        else:
+            self.showHelp = True
+            self.printHelp()
 
     def enableEditing(self):
-        self.printHelp()
+        self.stat.node.show()
+        self.help.node.show()
         self.root.music.setVolume(0.03)
         self.select.show()
         self.setHudPiece()
         self.root.hud.screenUp()
 
     def disableEditing(self):
-        self.console.fill()
-        self.console.refresh()
+        self.stat.node.hide()
+        self.help.node.hide()
         self.root.music.setVolume(0.1)
         self.select.hide()
         self.hudPiece.hide()
@@ -228,10 +264,6 @@ class RoadMan():
             if d == "d": self.current[1]+=16
             if d == "l": self.current[1]+=1
             if d == "r": self.current[1]-=1
-        else:
-            print(self.root.mouse)
-            self.current[1] += int(self.root.mouse[0])
-            self.current[1] += int(self.root.mouse[1]*16)
 
         if self.current[1] < 0:
             self.current[1] += 256
@@ -291,68 +323,82 @@ class RoadMan():
         self.buildMap(y)
 
     # MAP OPERATIONS
+    def getMap(self):
+        self.destroyMap()
+        self.map = self.maps[self.currentMap]
+        self.gravity = self.map[0]
+        self.fueldrain = self.map[1]
+        self.o2drain = self.map[2]
+        self.printStat()
+        self.map = self.map[3:] # seperate gravity/drains
+        self.buildMap()
+
+    def rememberMap(self):
+        base = [self.gravity, self.fueldrain, self.o2drain]
+        self.maps[self.currentMap] = base+self.map
+
     def playNextMap(self):
         self.currentMap += 1
        # TODO: if last map, play credits map.
        # Repeat from start for now
         if self.currentMap >= len(self.maps):
             self.currentMap = 0
-        self.destroyMap()
-        self.map = self.maps[self.currentMap]
-        self.buildMap()
+        self.getMap()
         self.root.shuffleSong()
 
-
     def newMap(self):
+        self.rememberMap()
         self.currentMap = len(self.maps)
-        self.maps.append(self.map)
+        self.maps.append([])
         self.clearMap()
-        self.buildMap()
-        self.printHelp()
         self.pos[1] = 0
 
     def nextMap(self):
+        self.rememberMap()
         self.currentMap += 1
         if self.currentMap >= len(self.maps):
             self.currentMap = 0
-        self.destroyMap()
-        self.map = self.maps[self.currentMap]
-        self.buildMap()
-        self.printHelp()
+        self.getMap()
         self.root.shuffleSong()
         self.pos[1] = 0
 
     def prevMap(self):
+        self.rememberMap()
         self.currentMap -= 1
         if self.currentMap < 0:
             self.currentMap = len(self.maps)-1
-        self.destroyMap()
-        self.map = self.maps[self.currentMap]
-        self.buildMap()
-        self.printHelp()
-        self.root.shuffleSong()
+        self.getMap()
         self.pos[1] = 0
+        self.root.shuffleSong()
 
     def destroyMap(self):
         for node in self.mapNodes:
             node.removeNode()
 
     def clearMap(self): # Clear map
-        self.map = []
-        self.maps[self.currentMap] = self.map
+        self.gravity = 3
+        self.fueldrain = 1
+        self.o2drain = 1
+        self.map = [3,1,1] # default gravity/drains
         for r in EM: self.map.append(r[:])
-        self.destroyMap()
-        self.buildMap()
+        self.maps[self.currentMap] = self.map
         self.pos[1] = 0
+        self.getMap()
+
 
     # FILE OPERATIONS
     def saveMap(self): # Save map to bytes-file
+        self.rememberMap()
         data = Datagram()
         no_part = 64
         next_tile = 65
         next_map = 66
-        for map in self.maps:
-            if len(map) > 1:
+        for m, map in enumerate(self.maps):
+            if len(map) >= 1:
+                data.addUint8(map[0]) # gravity
+                data.addUint8(map[1]) # fuel-drain
+                data.addUint8(map[2]) # o2-drain
+                map = map[3:]
                 for y in map:
                     for x in y:
                         for z in x:
@@ -371,43 +417,65 @@ class RoadMan():
         data = Datagram(file_data)
         iterator = DatagramIterator(data)
         is_color = False
+        mm = 0
         maps, map, row, tile  = [], [], [], []
         x, y, z = 0, 0, 0
         for i in range(iterator.getRemainingSize()):
             n = iterator.getUint8()
-            if is_color:
-                is_color = False
-                part.append(n)
-                tile.append(part)
+            if mm <= 2: # gravity and drains
+                map.append(n)
+                mm += 1
             else:
-                if n < 64:
-                    part = [n]
-                    is_color = True
+                if is_color:
+                    is_color = False
+                    part.append(n)
+                    tile.append(part)
                 else:
-                    if n == 64: 
-                        tile.append(P)
-                        z += 1
-                    if n == 65: 
-                        x += 1
-                        row.append(tile)
-                        tile = []
-                    if n == 66:
-                        x = y = z = 0
-                        maps.append(map)
-                        map, row, tile = [],[],[]
-                    if x >= 9:
-                        x = 0
-                        y += 1
-                        map.append(row)
-                        row = []
+                    if n < 64:
+                        part = [n]
+                        is_color = True
+                    else:
+                        if n == 64: 
+                            tile.append(P)
+                            z += 1
+                        if n == 65: 
+                            x += 1
+                            row.append(tile)
+                            tile = []
+                        if n == 66:
+                            mm = 0
+                            x = y = z = 0
+                            maps.append(map)
+                            map, row, tile = [],[],[]
+                        if x >= 9:
+                            x = 0
+                            y += 1
+                            map.append(row)
+                            row = []
         self.maps = maps
-        print(len(self.maps), " maps loaded")
         self.currentMap = 0
-        self.map = self.maps[0]
-        self.buildMap()
+        self.getMap()
 
     def setHudPiece(self):
         new_part = NodePath("rep")
         self.buildPart(new_part, (0,0,0), self.current)
         lights = (self.dlna, self.dlnb, self.aln)
         self.root.hud.setHolodek(new_part, lights)
+
+    def setGravity(self, inc):
+        self.gravity += inc
+        self.gravity = clam(self.gravity, 1, 10)
+        self.printStat()
+        self.root.ship.respawn()
+
+    def setFuelDrain(self, inc):
+        self.fueldrain += inc
+        self.fueldrain = clam(self.fueldrain, 1, 20)
+        self.printStat()
+        self.root.ship.respawn()
+
+    def setO2Drain(self, inc):
+        self.o2drain += inc
+        self.o2drain = clam(self.o2drain, 1, 20)
+        self.printStat()
+        self.root.ship.respawn()

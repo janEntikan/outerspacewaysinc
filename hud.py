@@ -57,6 +57,12 @@ class Hud():
         ln.setHpr(100,-60,90)
         self.node.setLight(ln)
 
+    def setGravity(self, gravity):
+        a = ["yellow", None]
+        self.val.addstr(0,0,"     ",a)
+        self.val.addstr(0,0,str((gravity+2)*100), a)
+        self.val.refresh()
+
     def setSpeed(self, speed):
         self.gauge["speed"].node().setVisibleChild(int(speed))
 
@@ -66,14 +72,16 @@ class Hud():
         self.gauge["air"].node().setVisibleChild(int(air)+1)
 
     def setFuel(self, fuel):
-        if int(fuel) < -2:
-            fuel = -1
+        if int(fuel) < -1:
+            fuel = 0
         self.gauge["fuel"].node().setVisibleChild(int(fuel)+1)
 
     def setMiles(self, miles, maplength):
         miles = 1/(miles+0.001)
         l = 1/(maplength*2)
         w = l/miles
+        if w > 1:
+            w = 1
         self.gauge["mileage"].setScale(w,1,1)
 
     def screenUp(self):
