@@ -35,7 +35,7 @@ class Hud():
         self.val.move(0,0)
         self.val.addstr(" 500", ["yellow",None])
         self.val.move(21,0)
-        self.val.addstr("IDLE", ["yellow",None])
+        self.val.addstr("NULL", ["yellow",None])
         self.val.refresh()
         self.val.node.setScale((0.5, 1, 0.03))
         self.val.node.setPos((0.075, 0, -0.68))
@@ -98,6 +98,7 @@ class Hud():
         speed = 0.03
         z = self.screen.getZ()
         if d == "u":
+            self.val.node.hide()
             if z < 0:
                 self.screen.setZ(z+speed)
                 return task.cont

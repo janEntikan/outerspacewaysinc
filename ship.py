@@ -68,6 +68,7 @@ class Ship:
     gravity = 0.3
     steer = 0
     steerspeed = 0.05
+    slide = 0
     jumpheight = 0.2
     jump = True
     control = True
@@ -105,14 +106,14 @@ class Ship:
         for i in range(3):
             if i == 1: y = 0.2
             else: y = -0.2
-            h = colRay(self.node, ((-1+i)/4, y, 0))
+            h = colRay(self.node, ((-1+i)/4, y, .1))
             self.handlers.append(h)
         self.colNose = colSpheres(self.node, 
-            [((0,.1,.07),.02)])
+            [((0,.1,.1),.02)])
         self.colLeft = colSpheres(self.node, 
-            [((-.15,-.1,.1), .1)])
+            [((-.15,-.1,.2), .1)])
         self.colRight = colSpheres(self.node, 
-            [((.15,-.1,.1), .1)])
+            [((.15,-.1,.2), .1)])
         self.colTop = colSpheres(self.node,
             [((0,0.2,0.4), .1)])
 
@@ -130,7 +131,7 @@ class Ship:
             self.speed = clamp(self.speed, 0, self.max)
             self.audio["engine"].setPlayRate((self.speed*7))
             # Update node position
-            x = self.node.getX()+(self.steer*self.steerspeed)
+            x = self.node.getX()+((self.steer+self.slide)*self.steerspeed)
             y = self.node.getY()+self.speed
             z = self.node.getZ()-self.fall
             self.node.setFluidPos(x, y, z)
@@ -181,12 +182,15 @@ class Ship:
         self.grounded = False
         self.under = under = None
         self.root.cTrav.traverse(render)
-        for handler in self.handlers:
+        hits = [0,0,0]
+        for h, handler in enumerate(self.handlers):
             if len(list(handler.entries)) > 0:
                 handler.sortEntries()
                 entry = list(handler.entries)[0]
                 hitPos = entry.getSurfacePoint(render)
                 distToGround =  self.node.getZ() - hitPos.getZ()
+                if distToGround < 0.03:
+                    hits[h] = 1
                 if distToGround < self.fall+0.05:
                     if self.fall > 0.05: #go bounce
                         self.fall = -0.05
@@ -201,6 +205,13 @@ class Ship:
                     self.grounded = True
                     under = entry.getSurfacePoint(render)
                     self.node.setZ(hitPos.getZ()+0.01)
+        s = self.getSteerVal()
+        if hits == [1,0,0]:
+            self.slide += 0.01
+        elif hits == [0,0,1]:
+            self.slide -= 0.01
+        elif not hits == [0,0,0]:
+            self.slide = 0
         # fall if not on floor
         if not self.grounded:
             self.fall += self.gravity/50
@@ -241,17 +252,22 @@ class Ship:
         if not self.dead and self.control:
             self.speed -= self.acceleration
 
+    def getSteerVal(self):
+        return ((self.speed*4)+0.1)
+
     def goLeft(self):
         if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
-                if self.colLeft.getNumEntries() == 0:        
-                    self.steer = -((self.speed*4)+0.1)
+                if self.colLeft.getNumEntries() == 0:
+                    self.steer = -self.getSteerVal()
+                    self.slide = 0
 
     def goRight(self):
         if not self.dead and self.control:
             if self.grounded or self.fall < -0.07:
                 if self.colRight.getNumEntries() == 0:
-                    self.steer = ((self.speed*4)+0.1)
+                    self.steer = self.getSteerVal()
+                    self.slide = 0.01
 
     def jumpUp(self):
         if not self.dead and self.control:
