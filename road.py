@@ -55,7 +55,7 @@ class RoadMan():
         self.moveCol("l"); self.moveCol("r")
         self.root.hud.setScreen(self.colors)
 
-        self.console = Purses(50,20)
+        self.console = Purses(50,23)
         self.console.node.setScale(0.25)
         self.console.node.setPos(-.7, 0, .7)
 
@@ -68,6 +68,8 @@ class RoadMan():
         self.console.addstr("EDIT MODE\n", ["grey",None])
         controls = (
             "tab            start game",
+            "arrows         move cursor on x and y",
+            "pgup/pgdown    move cursor on z",
             "space/delete   place/remove piece",
             "numpad 7 and 8 prev/next shape",
             "numpad 2,4,6,8 select color",
@@ -295,6 +297,8 @@ class RoadMan():
         self.destroyMap()
         self.map = self.maps[self.currentMap]
         self.buildMap()
+        self.root.shuffleSong()
+
 
     def newMap(self):
         self.currentMap = len(self.maps)
@@ -311,6 +315,7 @@ class RoadMan():
         self.map = self.maps[self.currentMap]
         self.buildMap()
         self.printHelp()
+        self.root.shuffleSong()
 
     def prevMap(self):
         self.currentMap -= 1
@@ -320,7 +325,7 @@ class RoadMan():
         self.map = self.maps[self.currentMap]
         self.buildMap()
         self.printHelp()
-
+        self.root.shuffleSong()
 
     def destroyMap(self):
         for node in self.mapNodes:

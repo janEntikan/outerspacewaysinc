@@ -1,5 +1,6 @@
 import sys
 import pman.shim
+from random import choice
 from direct.showbase.ShowBase import ShowBase
 
 from panda3d.core import loadPrcFile, Filename
@@ -34,11 +35,8 @@ class GameApp(ShowBase):
         self.delay = [0,5]
         base.win.display_regions[1].dimensions = (0, 1, 0.25, 1)
         render.setShaderAuto()
-
-        self.music = loader.loadSfx("assets/audio/ogg/road1.ogg")
-        self.music.setLoop(True)
-        self.music.setVolume(0.03)
-        self.music.play()
+        self.music = None
+        self.shuffleSong()
 
         self.mode = "edit"
         self.defineKeys()
@@ -173,6 +171,22 @@ class GameApp(ShowBase):
         self.ship = Ship(self, model)
         self.ship.node.reparentTo(render)
         self.ship.node.setPos(4,0,1)
+
+    def shuffleSong(self):
+        if self.music:
+            vol = self.music.getVolume()
+            self.music.stop()
+        else:
+            vol = 0.03
+        songs = (
+            "assets/audio/ogg/road1.ogg",
+            "assets/audio/ogg/road3.ogg"
+        )
+        self.music = loader.loadSfx(choice(songs))
+        self.music.setVolume(vol)
+        self.music.setLoop(True)
+        self.music.play()
+
 
 def main():
     app = GameApp()
