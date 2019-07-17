@@ -363,11 +363,11 @@ class RoadMan():
                                 data.addUint8(z[1])
                         data.addUint8(next_tile)
                 data.addUint8(next_map)
-        with open('saved.map', 'wb') as outfile:
+        with open('tracks.trk', 'wb') as outfile:
             outfile.write(bytes(data))
 
     def loadMap(self): # Load map from bytes-file
-        file_data = open('saved.map', 'rb').read()
+        file_data = open('tracks.trk', 'rb').read()
         data = Datagram(file_data)
         iterator = DatagramIterator(data)
         is_color = False
