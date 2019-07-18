@@ -22,10 +22,10 @@ class GameApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         pman.shim.init(self)
-        props = WindowProperties()
-        props.setCursorHidden(True)
-        props.setMouseMode(WindowProperties.M_relative)
-        base.win.requestProperties(props)
+        #props = WindowProperties()
+        #props.setCursorHidden(True)
+        #props.setMouseMode(WindowProperties.M_relative)
+        #base.win.requestProperties(props)
         base.disableMouse()
         self.mouse = [0,0]
         self.setFrameRateMeter(True)
@@ -176,7 +176,7 @@ class GameApp(ShowBase):
                 self.delay[0] = 0
             camY = -6+self.road.select.getY()
             base.camLens.setFov(90)
-        base.cam.setPos(4.001, camY, 2)
+        base.cam.setPos(4.001, camY, 1.7)
         self.updateKeys()
         return task.cont
 

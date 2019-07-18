@@ -464,18 +464,18 @@ class RoadMan():
 
     def setGravity(self, inc):
         self.gravity += inc
-        self.gravity = clam(self.gravity, 1, 10)
+        self.gravity = clamp(self.gravity, 1, 10)
         self.printStat()
         self.root.ship.respawn()
 
     def setFuelDrain(self, inc):
         self.fueldrain += inc
-        self.fueldrain = clam(self.fueldrain, 1, 20)
+        self.fueldrain = clamp(self.fueldrain, 1, 20)
         self.printStat()
         self.root.ship.respawn()
 
     def setO2Drain(self, inc):
         self.o2drain += inc
-        self.o2drain = clam(self.o2drain, 1, 20)
+        self.o2drain = clamp(self.o2drain, 1, 20)
         self.printStat()
         self.root.ship.respawn()
